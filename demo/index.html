@@ -7,23 +7,12 @@
       background: #fafafa;
     }
   </style>
+  <script src="../dist/src/media-sequence.js" type="module"></script>
 </head>
 <body>
-  <div id="demo"></div>
-
-  <script type="module">
-    import { html, render } from 'lit';
-    import '../dist/src/media-sequence.js';
-
-    const header = 'Hello owc World!';
-    render(
-      html`
-        <media-sequence .header=${header}>
-          some light-dom
-        </media-sequence>
-      `,
-      document.querySelector('#demo')
-    );
-  </script>
+  <div id="demo">
+    <media-sequence size=100 color="red">
+    </media-sequence>
+  </div>
 </body>
 </html>

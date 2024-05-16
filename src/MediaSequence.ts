@@ -1,27 +1,37 @@
-import { html, css, LitElement } from 'lit';
-import { property } from 'lit/decorators.js';
+export class MediaSequence extends HTMLElement {
 
-export class MediaSequence extends LitElement {
-  static styles = css`
-    :host {
-      display: block;
-      padding: 25px;
-      color: var(--media-sequence-text-color, #000);
-    }
-  `;
-
-  @property({ type: String }) header = 'Hey there';
-
-  @property({ type: Number }) counter = 5;
-
-  __increment() {
-    this.counter += 1;
+  static get observedAttributes(): string[] {
+    return ["color", "size"];
   }
 
-  render() {
-    return html`
-      <h2>${this.header} Nr. ${this.counter}!</h2>
-      <button @click=${this.__increment}>increment</button>
+  constructor() {
+    super();
+    const shadow = this.attachShadow({ mode: "open" });
+    const div = document.createElement("div");
+    const style = document.createElement("style");
+    shadow.appendChild(style);
+    shadow.appendChild(div);
+  }
+
+  public connectedCallback(): void {
+    console.log("Custom media-sequence element added to page.");
+    this.updateStyle();
+  }
+
+  public attributeChangedCallback(attr: string, oldValue: string, newValue: string): void {
+    console.log("Custom media-sequence element attributes changed.");
+    this.updateStyle();
+  }
+
+  private updateStyle(): void {
+    const style = this.shadowRoot?.querySelector("style");
+    if (style)
+      style.textContent = `
+      div {
+        width: ${this.getAttribute("size")}px;
+        height: ${this.getAttribute("size")}px;
+        background-color: ${this.getAttribute("color")};
+      }
     `;
   }
 }
