@@ -1,18 +1,22 @@
 <!doctype html>
 <html lang="en-GB">
-<head>
-  <meta charset="utf-8">
-  <style>
-    body {
-      background: #fafafa;
-    }
-  </style>
-  <script src="../dist/src/media-sequence.js" type="module"></script>
-</head>
-<body>
-  <div id="demo">
-    <media-sequence size=100 color="red">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        background: #fafafa;
+      }
+    </style>
+    <script src="../dist/src/media-sequence.js" type="module"></script>
+  </head>
+  <body>
+    <media-sequence
+      id="sequence"
+      width="640"
+      height="360"
+      style="background-color: #f00"
+    >
     </media-sequence>
-  </div>
-</body>
+    <button onclick="sequence.play()">Play</button>
+  </body>
 </html>
