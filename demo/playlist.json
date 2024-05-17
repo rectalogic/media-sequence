@@ -12,6 +12,10 @@
     "endTime": 105
   },
   {
+    "type": "image",
+    "src": "https://gl-transitions.com/static/media/hBd6EPoQT2C8VQYv65ys_White_Sands.51f2958f.jpg"
+  },
+  {
     "type": "video",
     "src": "https://cdn.glitch.me/364f8e5a-f12f-4f82-a386-20e6be6b1046/bbb_sunflower_1080p_30fps_normal_10min.mp4?v=1715787973754",
     "startTime": 5,

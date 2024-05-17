@@ -45,6 +45,9 @@ export class VideoMedia extends Media {
   }
 
   public play() {
+    // XXX this can throw
+    // DOMException: The media resource indicated by the src attribute or assigned media provider object was not suitable
+    // XXX need to catch and call error callback
     this._element.play();
   }
 

@@ -1,6 +1,7 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
+import createMedia from './MediaFactory.js';
 import { Media } from './Media.js';
 import { MediaClip, isMediaClipArray } from './MediaClip.js';
 
@@ -25,7 +26,7 @@ export class MediaSequence extends HTMLElement {
 
   private mediaClips?: MediaClip[];
 
-  private state: MediaState = MediaState.Uninitialized;
+  private state = MediaState.Uninitialized;
 
   // XXX handle video/img onerror, set error property and fire error event, also set/fire for playlist issues
 
@@ -141,7 +142,7 @@ export class MediaSequence extends HTMLElement {
 
   private static createMedia(mediaClip: MediaClip): Media {
     // XXX pass error callback
-    return Media.create(mediaClip);
+    return createMedia(mediaClip);
   }
 
   private static destroyMedia(media: Media): undefined {
@@ -150,15 +151,16 @@ export class MediaSequence extends HTMLElement {
     return undefined;
   }
 
-  private onAnimationFrame = (_timestamp: number) => {
-    if (
-      this.activeMedia &&
-      this.mediaClips &&
-      (this.activeMedia.ended ||
+  private onAnimationFrame = (timestamp: number) => {
+    if (this.activeMedia && this.mediaClips) {
+      this.activeMedia.animationTime = timestamp;
+      if (
+        this.activeMedia.ended ||
         (this.mediaClips[0].endTime &&
-          this.activeMedia.currentTime >= this.mediaClips[0].endTime))
-    ) {
-      this.nextVideo();
+          this.activeMedia.currentTime >= this.mediaClips[0].endTime)
+      ) {
+        this.nextVideo();
+      }
     }
     if (this.state === MediaState.Playing)
       requestAnimationFrame(this.onAnimationFrame);

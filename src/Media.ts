@@ -2,22 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 import { MediaClip } from './MediaClip.js';
-import { VideoMedia } from './VideoMedia.js';
-import { ImageMedia } from './ImageMedia.js';
+
 // XXX will need to handle the case where we are transitioning video and video/image and one of them stalls/buffers - need to pause the other so they stay in sync?
 
 export abstract class Media {
-  static create(mediaClip: MediaClip) {
-    switch (mediaClip.type) {
-      case 'video':
-        return new VideoMedia(mediaClip);
-      case 'image':
-        return new ImageMedia(mediaClip);
-      default:
-        throw new TypeError(`Unimplemented media type ${mediaClip.type}`);
-    }
-  }
-
   protected _mediaClip: MediaClip;
 
   constructor(mediaClip: MediaClip) {
@@ -35,6 +23,9 @@ export abstract class Media {
   public abstract get intrinsicHeight(): number;
 
   public abstract get currentTime(): number;
+
+  // eslint-disable-next-line class-methods-use-this, no-empty-function
+  public set animationTime(timestamp: number) {}
 
   public abstract get ended(): boolean;
 

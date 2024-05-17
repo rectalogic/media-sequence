@@ -4,6 +4,7 @@
     "module": "esnext",
     "moduleResolution": "node",
     "noEmitOnError": true,
+    "noImplicitOverride": true,
     "lib": ["es2017", "dom"],
     "strict": true,
     "esModuleInterop": false,
