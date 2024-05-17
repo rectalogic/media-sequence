@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 import { MediaClip } from './MediaClip.js';
+import Resizable from './Resizable.js';
 
 // XXX will need to handle the case where we are transitioning video and video/image and one of them stalls/buffers - need to pause the other so they stay in sync?
 
-export abstract class Media {
+export abstract class Media implements Resizable {
   protected _mediaClip: MediaClip;
 
   constructor(mediaClip: MediaClip) {
@@ -16,7 +17,17 @@ export abstract class Media {
     return this._mediaClip;
   }
 
+  public hide() {
+    this.element.style.visibility = 'hidden';
+  }
+
+  public show() {
+    this.element.style.visibility = 'visible';
+  }
+
   public abstract get element(): HTMLElement;
+
+  public abstract resize(width: number, height: number): void;
 
   public abstract get intrinsicWidth(): number;
 

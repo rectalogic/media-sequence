@@ -16,9 +16,9 @@ export class ImageMedia extends Media {
 
   private state: State = State.Paused;
 
-  private lastTimestamp = 0;
+  private lastTimestamp?: number;
 
-  private currentTimestamp = 0;
+  private currentTimestamp?: number;
 
   private _currentTime: number;
 
@@ -27,6 +27,7 @@ export class ImageMedia extends Media {
     const image = document.createElement('img');
     image.className = 'image';
     image.style.visibility = 'hidden';
+    image.style.objectFit = 'contain'; // XXX make this configurable via MediaClip
     image.loading = 'eager';
     image.crossOrigin = 'anonymous';
     image.src = this.mediaClip.src;
@@ -36,6 +37,11 @@ export class ImageMedia extends Media {
 
   public get element() {
     return this._element;
+  }
+
+  public resize(width: number, height: number) {
+    this._element.width = width;
+    this._element.height = height;
   }
 
   public get intrinsicWidth() {
@@ -51,8 +57,14 @@ export class ImageMedia extends Media {
   }
 
   public get currentTime() {
-    if (this.state === State.Paused) return this._currentTime;
-    this._currentTime += (this.currentTimestamp - this.lastTimestamp) / 1000;
+    if (this.state === State.Paused || this.currentTimestamp === undefined)
+      return this._currentTime;
+    this._currentTime +=
+      (this.currentTimestamp -
+        (this.lastTimestamp === undefined
+          ? this.currentTimestamp
+          : this.lastTimestamp)) /
+      1000;
     this.lastTimestamp = this.currentTimestamp;
     return this._currentTime;
   }
@@ -71,7 +83,8 @@ export class ImageMedia extends Media {
 
   public pause() {
     this.state = State.Paused;
-    this.lastTimestamp = this.currentTimestamp;
+    this.currentTimestamp = undefined;
+    this.lastTimestamp = undefined;
   }
 
   public stop() {

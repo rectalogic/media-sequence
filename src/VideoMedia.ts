@@ -12,6 +12,7 @@ export class VideoMedia extends Media {
     const video = document.createElement('video');
     video.className = 'video';
     video.style.visibility = 'hidden';
+    video.style.objectFit = 'contain'; // XXX make this configurable via MediaClip
     video.preload = 'auto';
     video.crossOrigin = 'anonymous';
     video.src = this.mediaClip.src;
@@ -25,6 +26,11 @@ export class VideoMedia extends Media {
   }
 
   // XXX endTime could be > duration
+
+  public resize(width: number, height: number) {
+    this._element.width = width;
+    this._element.height = height;
+  }
 
   // XXX intrinsice size can change during playback, fires resize event. May need to listen for this to recompute aspect ratio
 

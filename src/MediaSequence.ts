@@ -28,6 +28,8 @@ export class MediaSequence extends HTMLElement {
 
   private state = MediaState.Uninitialized;
 
+  private resizeObserver: ResizeObserver;
+
   // XXX handle video/img onerror, set error property and fire error event, also set/fire for playlist issues
 
   // styling canvas just stretches content, width/height are the real size
@@ -39,15 +41,22 @@ export class MediaSequence extends HTMLElement {
     super();
     const shadow = this.attachShadow({ mode: 'open' });
     this.sheet = new CSSStyleSheet();
-    const internalSheet = new CSSStyleSheet();
-    internalSheet.replaceSync(`
-      :host > video, img, canvas {
-        width: 100%;
-        height: 100%;
-      }
-    `);
     this.updateSize();
-    shadow.adoptedStyleSheets.push(internalSheet, this.sheet);
+    shadow.adoptedStyleSheets.push(this.sheet);
+
+    this.resizeObserver = new ResizeObserver(entries => {
+      if (!(this.activeMedia || this.loadingMedia)) return;
+      for (const entry of entries) {
+        if (entry.target === this) {
+          const size = entry.contentBoxSize[0];
+          if (this.activeMedia)
+            this.activeMedia.resize(size.inlineSize, size.blockSize);
+          if (this.loadingMedia)
+            this.loadingMedia.resize(size.inlineSize, size.blockSize);
+        }
+      }
+    });
+    this.resizeObserver.observe(this, { box: 'content-box' });
   }
 
   public connectedCallback() {
@@ -140,14 +149,16 @@ export class MediaSequence extends HTMLElement {
     this.state = MediaState.Uninitialized;
   }
 
-  private static createMedia(mediaClip: MediaClip): Media {
+  private createMedia(mediaClip: MediaClip): Media {
     // XXX pass error callback
-    return createMedia(mediaClip);
+    const media = createMedia(mediaClip);
+    media.resize(this.offsetWidth, this.offsetHeight);
+    return media;
   }
 
   private static destroyMedia(media: Media): undefined {
     media.pause();
-    media.element.style.visibility = 'hidden'; // eslint-disable-line no-param-reassign
+    media.hide();
     return undefined;
   }
 
@@ -171,26 +182,25 @@ export class MediaSequence extends HTMLElement {
 
     // First call, setup initial 2 videos
     if (!this.activeMedia) {
-      this.activeMedia = MediaSequence.createMedia(this.mediaClips[0]);
-      this.activeMedia.element.style.visibility = 'visible';
+      this.activeMedia = this.createMedia(this.mediaClips[0]);
+      this.activeMedia.show();
       this.shadowRoot?.appendChild(this.activeMedia.element);
       this.activeMedia.play();
 
       if (this.mediaClips.length > 1) {
-        this.loadingMedia = MediaSequence.createMedia(this.mediaClips[1]);
+        this.loadingMedia = this.createMedia(this.mediaClips[1]);
       }
     } else if (this.loadingMedia) {
       const currentMedia = this.activeMedia;
       this.activeMedia = this.loadingMedia;
-      this.activeMedia.element.style.visibility = 'visible';
+      this.activeMedia.show();
       currentMedia.element.replaceWith(this.activeMedia.element);
       MediaSequence.destroyMedia(currentMedia);
       this.mediaClips.shift();
-      // Chrome/Firefox seamless, Safari flashes background when replacing video - play() seems to cause the flash - adding small delay helps
-      setTimeout(() => this.activeMedia?.play(), 20);
+      this.activeMedia.play();
 
       if (this.mediaClips.length > 1) {
-        this.loadingMedia = MediaSequence.createMedia(this.mediaClips[1]);
+        this.loadingMedia = this.createMedia(this.mediaClips[1]);
       } else {
         this.loadingMedia = undefined;
       }
