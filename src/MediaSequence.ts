@@ -5,13 +5,9 @@ export class MediaSequence extends HTMLElement {
 
   private sheet: CSSStyleSheet;
 
-  private width: number | null = null;
+  private activeVideo?: HTMLVideoElement;
 
-  private height: number | null = null;
-
-  private activeVideo: HTMLVideoElement | null = null;
-
-  private inactiveVideo: HTMLVideoElement | null = null;
+  private inactiveVideo?: HTMLVideoElement;
 
   private sequence = [
     {
@@ -44,11 +40,18 @@ export class MediaSequence extends HTMLElement {
     super();
     const shadow = this.attachShadow({ mode: 'open' });
     this.sheet = new CSSStyleSheet();
+    const internalSheet = new CSSStyleSheet();
+    internalSheet.replaceSync(`
+      :host > video, img, canvas {
+        width: 100%;
+        height: 100%;
+      }
+    `);
     this.updateSize();
-    shadow.adoptedStyleSheets.push(this.sheet);
+    shadow.adoptedStyleSheets.push(internalSheet, this.sheet);
   }
 
-  public connectedCallback(): void {
+  public connectedCallback() {
     console.log('Custom media-sequence element added to page.');
   }
 
@@ -56,42 +59,31 @@ export class MediaSequence extends HTMLElement {
     attr: string,
     _oldValue: string,
     _newValue: string,
-  ): void {
-    if (attr === 'width') {
-      this.width = parseInt(this.getAttribute('width') || '', 10);
-      this.updateSize();
-    } else if (attr === 'height') {
-      this.height = parseInt(this.getAttribute('height') || '', 10);
+  ) {
+    console.log(`Custom media-sequence attributeChangedCallback ${attr}`);
+    if (attr === 'width' || attr === 'height') {
       this.updateSize();
     }
   }
 
-  private updateSize(): void {
+  private updateSize() {
+    const width = this.getAttribute('width');
+    const height = this.getAttribute('height');
     this.sheet.replaceSync(`
       :host {
         display: inline-block;
-        width: ${this.width ? `${this.width}px` : 'auto'};
-        height: ${this.height ? `${this.height}px` : 'auto'};
+        width: ${width !== null ? `${width}px` : 'auto'};
+        height: ${height !== null ? `${height}px` : 'auto'};
       }
     `);
-    if (this.activeVideo) {
-      if (this.width != null) this.activeVideo.width = this.width;
-      if (this.height != null) this.activeVideo.height = this.height;
-    }
-    if (this.inactiveVideo) {
-      if (this.width != null) this.inactiveVideo.width = this.width;
-      if (this.height != null) this.inactiveVideo.height = this.height;
-    }
   }
 
-  public play(): void {
+  public play() {
     this.nextVideo();
   }
 
   private createVideo(): HTMLVideoElement {
     const video = document.createElement('video');
-    if (this.width) video.width = this.width;
-    if (this.height) video.height = this.height;
     video.style.visibility = 'hidden';
     video.preload = 'auto';
     video.crossOrigin = 'anonymous';
@@ -99,16 +91,16 @@ export class MediaSequence extends HTMLElement {
     return video;
   }
 
-  private destroyVideo(video: HTMLVideoElement): null {
+  private destroyVideo(video: HTMLVideoElement): undefined {
     video.pause();
     video.style.visibility = 'hidden'; // eslint-disable-line no-param-reassign
     video.removeEventListener('timeupdate', this.onTimeUpdate);
     video.removeAttribute('src');
     video.load();
-    return null;
+    return undefined;
   }
 
-  private onTimeUpdate = (_event: Event): void => {
+  private onTimeUpdate = (_event: Event) => {
     // Check for activeVideo.ended too, we will stop getting updates when it ends
     if (
       this.activeVideo &&
@@ -118,7 +110,7 @@ export class MediaSequence extends HTMLElement {
     }
   };
 
-  private nextVideo(): void {
+  private nextVideo() {
     // First call, setup initial 2 videos
     if (!this.activeVideo) {
       this.activeVideo = this.createVideo();
@@ -142,8 +134,7 @@ export class MediaSequence extends HTMLElement {
       this.destroyVideo(currentVideo);
       this.sequence.shift();
       // Chrome/Firefox seamless, Safari flashes background when replacing video - play() seems to cause the flash - adding small delay helps
-      const playVideo = this.activeVideo;
-      setTimeout(() => playVideo.play(), 20);
+      setTimeout(() => this.activeVideo?.play(), 20);
 
       if (this.sequence.length > 1) {
         this.inactiveVideo = this.createVideo();
@@ -151,7 +142,7 @@ export class MediaSequence extends HTMLElement {
         this.inactiveVideo.currentTime = this.sequence[1].start;
         this.inactiveVideo.load();
       } else {
-        this.inactiveVideo = null;
+        this.inactiveVideo = undefined;
       }
     } else {
       this.shadowRoot?.removeChild(this.activeVideo);
