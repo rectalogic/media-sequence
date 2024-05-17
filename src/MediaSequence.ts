@@ -1,3 +1,6 @@
+// Copyright (C) 2024 Andrew Wason
+// SPDX-License-Identifier: MIT
+
 export class MediaSequence extends HTMLElement {
   static get observedAttributes(): string[] {
     return ['playlist', 'width', 'height'];
