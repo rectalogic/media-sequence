@@ -61,8 +61,7 @@ export class MediaSequence extends HTMLElement {
   }
 
   private async updatePlaylist(url: string) {
-    //XXX stop any existing playback (cleanup DOM) - need play/stop/reset APIs
-    this.mediaClips = undefined;
+    this.stop();
     try {
       const response = await fetch(url);
       if (!response.ok) {
@@ -96,8 +95,24 @@ export class MediaSequence extends HTMLElement {
     this.nextVideo();
   }
 
+  public pause() {}
+
+  public stop() {
+    if (this.activeVideo) {
+      this.destroyVideo(this.activeVideo);
+      this.shadowRoot?.removeChild(this.activeVideo);
+      this.activeVideo = undefined;
+    }
+    if (this.inactiveVideo) {
+      this.destroyVideo(this.inactiveVideo);
+      this.inactiveVideo = undefined;
+    }
+    this.mediaClips = undefined;
+  }
+
   private createVideo(): HTMLVideoElement {
     const video = document.createElement('video');
+    video.className = 'video';
     video.style.visibility = 'hidden';
     video.preload = 'auto';
     video.crossOrigin = 'anonymous';
