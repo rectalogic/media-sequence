@@ -1,6 +1,8 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
+import { MediaClip, isMediaClipArray } from './MediaClip.js';
+
 export class MediaSequence extends HTMLElement {
   static get observedAttributes(): string[] {
     return ['playlist', 'width', 'height'];
@@ -12,28 +14,10 @@ export class MediaSequence extends HTMLElement {
 
   private inactiveVideo?: HTMLVideoElement;
 
-  private sequence = [
-    {
-      src: 'https://cdn.glitch.me/364f8e5a-f12f-4f82-a386-20e6be6b1046/bbb_sunflower_1080p_30fps_normal_10min.mp4?v=1715787973754',
-      start: 100,
-      end: 105,
-    },
-    {
-      src: 'https://cdn.glitch.me/364f8e5a-f12f-4f82-a386-20e6be6b1046/elephants_dream_1280x720.mp4?v=1715789814855',
-      start: 100,
-      end: 105,
-    },
-    {
-      src: 'https://cdn.glitch.me/364f8e5a-f12f-4f82-a386-20e6be6b1046/bbb_sunflower_1080p_30fps_normal_10min.mp4?v=1715787973754',
-      start: 5,
-      end: 10,
-    },
-    {
-      src: 'https://cdn.glitch.me/364f8e5a-f12f-4f82-a386-20e6be6b1046/elephants_dream_1280x720.mp4?v=1715789814855',
-      start: 200,
-      end: 205,
-    },
-  ];
+  private mediaClips?: MediaClip[];
+
+  // XXX handle video/img onerror, set error property and fire error event, also set/fire for playlist issues
+
   // styling canvas just stretches content, width/height are the real size
   // video is different, it object-fits video into the styled element (or used w/h or native size)
   // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/canvas#sizing_the_canvas_using_css_versus_html
@@ -61,11 +45,38 @@ export class MediaSequence extends HTMLElement {
   public attributeChangedCallback(
     attr: string,
     _oldValue: string,
-    _newValue: string,
+    newValue: string,
   ) {
     console.log(`Custom media-sequence attributeChangedCallback ${attr}`);
-    if (attr === 'width' || attr === 'height') {
-      this.updateSize();
+    switch (attr) {
+      case 'width':
+      case 'height':
+        this.updateSize();
+        break;
+      case 'playlist':
+        this.updatePlaylist(newValue);
+        break;
+      default:
+    }
+  }
+
+  private async updatePlaylist(url: string) {
+    //XXX stop any existing playback (cleanup DOM) - need play/stop/reset APIs
+    this.mediaClips = undefined;
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        console.error(response);
+        // XXX set error and fire error event
+      }
+      const json = await response.json();
+      if (isMediaClipArray(json)) this.mediaClips = json;
+      else {
+        // XXX set error and fire error event
+      }
+    } catch (error) {
+      console.error(`Download error: ${error}`);
+      // XXX set error and fire error event
     }
   }
 
@@ -107,26 +118,30 @@ export class MediaSequence extends HTMLElement {
     // Check for activeVideo.ended too, we will stop getting updates when it ends
     if (
       this.activeVideo &&
-      this.activeVideo.currentTime >= this.sequence[0].end
+      this.mediaClips &&
+      (this.activeVideo.ended ||
+        (this.mediaClips[0].endTime &&
+          this.activeVideo.currentTime >= this.mediaClips[0].endTime))
     ) {
       this.nextVideo();
     }
   };
 
   private nextVideo() {
+    if (!this.mediaClips) return;
     // First call, setup initial 2 videos
     if (!this.activeVideo) {
       this.activeVideo = this.createVideo();
       this.activeVideo.style.visibility = 'visible';
-      this.activeVideo.src = this.sequence[0].src;
-      this.activeVideo.currentTime = this.sequence[0].start;
+      this.activeVideo.src = this.mediaClips[0].src;
+      this.activeVideo.currentTime = this.mediaClips[0].startTime || 0;
       this.shadowRoot?.appendChild(this.activeVideo);
       this.activeVideo.play();
 
-      if (this.sequence.length > 1) {
+      if (this.mediaClips.length > 1) {
         this.inactiveVideo = this.createVideo();
-        this.inactiveVideo.src = this.sequence[1].src;
-        this.inactiveVideo.currentTime = this.sequence[1].start;
+        this.inactiveVideo.src = this.mediaClips[1].src;
+        this.inactiveVideo.currentTime = this.mediaClips[1].startTime || 0;
         this.inactiveVideo.load();
       }
     } else if (this.inactiveVideo) {
@@ -135,14 +150,14 @@ export class MediaSequence extends HTMLElement {
       this.activeVideo.style.visibility = 'visible';
       currentVideo.replaceWith(this.activeVideo);
       this.destroyVideo(currentVideo);
-      this.sequence.shift();
+      this.mediaClips.shift();
       // Chrome/Firefox seamless, Safari flashes background when replacing video - play() seems to cause the flash - adding small delay helps
       setTimeout(() => this.activeVideo?.play(), 20);
 
-      if (this.sequence.length > 1) {
+      if (this.mediaClips.length > 1) {
         this.inactiveVideo = this.createVideo();
-        this.inactiveVideo.src = this.sequence[1].src;
-        this.inactiveVideo.currentTime = this.sequence[1].start;
+        this.inactiveVideo.src = this.mediaClips[1].src;
+        this.inactiveVideo.currentTime = this.mediaClips[1].startTime || 0;
         this.inactiveVideo.load();
       } else {
         this.inactiveVideo = undefined;
