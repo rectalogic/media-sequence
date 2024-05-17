@@ -1,7 +1,16 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
+import { Media } from './Media.js';
 import { MediaClip, isMediaClipArray } from './MediaClip.js';
+
+enum MediaState {
+  Uninitialized = 0,
+  Initialized,
+  Playing,
+  Paused,
+  Error,
+}
 
 export class MediaSequence extends HTMLElement {
   static get observedAttributes(): string[] {
@@ -10,11 +19,13 @@ export class MediaSequence extends HTMLElement {
 
   private sheet: CSSStyleSheet;
 
-  private activeVideo?: HTMLVideoElement;
+  private activeMedia?: Media;
 
-  private inactiveVideo?: HTMLVideoElement;
+  private loadingMedia?: Media;
 
   private mediaClips?: MediaClip[];
+
+  private state: MediaState = MediaState.Uninitialized;
 
   // XXX handle video/img onerror, set error property and fire error event, also set/fire for playlist issues
 
@@ -66,16 +77,21 @@ export class MediaSequence extends HTMLElement {
       const response = await fetch(url);
       if (!response.ok) {
         console.error(response);
+        this.state = MediaState.Error;
         // XXX set error and fire error event
       }
       const json = await response.json();
-      if (isMediaClipArray(json)) this.mediaClips = json;
-      else {
+      if (isMediaClipArray(json)) {
+        this.mediaClips = json;
+        this.state = MediaState.Initialized;
+      } else {
         // XXX set error and fire error event
+        this.state = MediaState.Error;
       }
     } catch (error) {
       console.error(`Download error: ${error}`);
       // XXX set error and fire error event
+      this.state = MediaState.Error;
     }
   }
 
@@ -92,94 +108,93 @@ export class MediaSequence extends HTMLElement {
   }
 
   public play() {
+    if (
+      this.state !== MediaState.Initialized &&
+      this.state !== MediaState.Paused
+    )
+      return;
+    this.state = MediaState.Playing;
     this.nextVideo();
+    requestAnimationFrame(this.onAnimationFrame);
   }
 
-  public pause() {}
+  public pause() {
+    if (this.state === MediaState.Playing) {
+      // XXX implement pausing
+      this.state = MediaState.Paused;
+    }
+  }
 
   public stop() {
-    if (this.activeVideo) {
-      this.destroyVideo(this.activeVideo);
-      this.shadowRoot?.removeChild(this.activeVideo);
-      this.activeVideo = undefined;
+    if (this.activeMedia) {
+      MediaSequence.destroyMedia(this.activeMedia);
+      this.shadowRoot?.removeChild(this.activeMedia.element);
+      this.activeMedia = undefined;
     }
-    if (this.inactiveVideo) {
-      this.destroyVideo(this.inactiveVideo);
-      this.inactiveVideo = undefined;
+    if (this.loadingMedia) {
+      MediaSequence.destroyMedia(this.loadingMedia);
+      this.loadingMedia = undefined;
     }
     this.mediaClips = undefined;
+    this.state = MediaState.Uninitialized;
   }
 
-  private createVideo(): HTMLVideoElement {
-    const video = document.createElement('video');
-    video.className = 'video';
-    video.style.visibility = 'hidden';
-    video.preload = 'auto';
-    video.crossOrigin = 'anonymous';
-    video.addEventListener('timeupdate', this.onTimeUpdate);
-    return video;
+  private static createMedia(mediaClip: MediaClip): Media {
+    // XXX pass error callback
+    return Media.create(mediaClip);
   }
 
-  private destroyVideo(video: HTMLVideoElement): undefined {
-    video.pause();
-    video.style.visibility = 'hidden'; // eslint-disable-line no-param-reassign
-    video.removeEventListener('timeupdate', this.onTimeUpdate);
-    video.removeAttribute('src');
-    video.load();
+  private static destroyMedia(media: Media): undefined {
+    media.pause();
+    media.element.style.visibility = 'hidden'; // eslint-disable-line no-param-reassign
     return undefined;
   }
 
-  private onTimeUpdate = (_event: Event) => {
-    // Check for activeVideo.ended too, we will stop getting updates when it ends
+  private onAnimationFrame = (_timestamp: number) => {
     if (
-      this.activeVideo &&
+      this.activeMedia &&
       this.mediaClips &&
-      (this.activeVideo.ended ||
+      (this.activeMedia.ended ||
         (this.mediaClips[0].endTime &&
-          this.activeVideo.currentTime >= this.mediaClips[0].endTime))
+          this.activeMedia.currentTime >= this.mediaClips[0].endTime))
     ) {
       this.nextVideo();
     }
+    if (this.state === MediaState.Playing)
+      requestAnimationFrame(this.onAnimationFrame);
   };
 
   private nextVideo() {
     if (!this.mediaClips) return;
+
     // First call, setup initial 2 videos
-    if (!this.activeVideo) {
-      this.activeVideo = this.createVideo();
-      this.activeVideo.style.visibility = 'visible';
-      this.activeVideo.src = this.mediaClips[0].src;
-      this.activeVideo.currentTime = this.mediaClips[0].startTime || 0;
-      this.shadowRoot?.appendChild(this.activeVideo);
-      this.activeVideo.play();
+    if (!this.activeMedia) {
+      this.activeMedia = MediaSequence.createMedia(this.mediaClips[0]);
+      this.activeMedia.element.style.visibility = 'visible';
+      this.shadowRoot?.appendChild(this.activeMedia.element);
+      this.activeMedia.play();
 
       if (this.mediaClips.length > 1) {
-        this.inactiveVideo = this.createVideo();
-        this.inactiveVideo.src = this.mediaClips[1].src;
-        this.inactiveVideo.currentTime = this.mediaClips[1].startTime || 0;
-        this.inactiveVideo.load();
+        this.loadingMedia = MediaSequence.createMedia(this.mediaClips[1]);
       }
-    } else if (this.inactiveVideo) {
-      const currentVideo = this.activeVideo;
-      this.activeVideo = this.inactiveVideo;
-      this.activeVideo.style.visibility = 'visible';
-      currentVideo.replaceWith(this.activeVideo);
-      this.destroyVideo(currentVideo);
+    } else if (this.loadingMedia) {
+      const currentMedia = this.activeMedia;
+      this.activeMedia = this.loadingMedia;
+      this.activeMedia.element.style.visibility = 'visible';
+      currentMedia.element.replaceWith(this.activeMedia.element);
+      MediaSequence.destroyMedia(currentMedia);
       this.mediaClips.shift();
       // Chrome/Firefox seamless, Safari flashes background when replacing video - play() seems to cause the flash - adding small delay helps
-      setTimeout(() => this.activeVideo?.play(), 20);
+      setTimeout(() => this.activeMedia?.play(), 20);
 
       if (this.mediaClips.length > 1) {
-        this.inactiveVideo = this.createVideo();
-        this.inactiveVideo.src = this.mediaClips[1].src;
-        this.inactiveVideo.currentTime = this.mediaClips[1].startTime || 0;
-        this.inactiveVideo.load();
+        this.loadingMedia = MediaSequence.createMedia(this.mediaClips[1]);
       } else {
-        this.inactiveVideo = undefined;
+        this.loadingMedia = undefined;
       }
     } else {
-      this.shadowRoot?.removeChild(this.activeVideo);
-      this.activeVideo = this.destroyVideo(this.activeVideo);
+      this.shadowRoot?.removeChild(this.activeMedia.element);
+      this.activeMedia = MediaSequence.destroyMedia(this.activeMedia);
     }
   }
 }
