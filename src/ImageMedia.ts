@@ -59,12 +59,9 @@ export class ImageMedia extends Media {
   public get currentTime() {
     if (this.state === State.Paused || this.currentTimestamp === undefined)
       return this._currentTime;
-    this._currentTime +=
-      (this.currentTimestamp -
-        (this.lastTimestamp === undefined
-          ? this.currentTimestamp
-          : this.lastTimestamp)) /
-      1000;
+    if (this.lastTimestamp === undefined)
+      this.lastTimestamp = this.currentTimestamp;
+    this._currentTime += (this.currentTimestamp - this.lastTimestamp) / 1000;
     this.lastTimestamp = this.currentTimestamp;
     return this._currentTime;
   }
