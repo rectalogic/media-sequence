@@ -25,9 +25,6 @@ export class ImageMedia extends Media {
   constructor(mediaClip: MediaClip) {
     super(mediaClip);
     const image = document.createElement('img');
-    image.className = 'image';
-    image.style.visibility = 'hidden';
-    image.style.objectFit = 'contain'; // XXX make this configurable via MediaClip
     image.loading = 'eager';
     image.crossOrigin = 'anonymous';
     image.src = this.mediaClip.src;
@@ -39,9 +36,12 @@ export class ImageMedia extends Media {
     return this._element;
   }
 
+  public override isValidTexture() {
+    return this._element.complete;
+  }
+
   public resize(width: number, height: number) {
-    this._element.width = width;
-    this._element.height = height;
+    // XXX resize filters? or dump Resizable
   }
 
   public get intrinsicWidth() {
@@ -86,7 +86,6 @@ export class ImageMedia extends Media {
 
   public stop() {
     this.pause();
-    this._element.style.visibility = 'hidden';
     this._element.removeAttribute('src');
   }
 }

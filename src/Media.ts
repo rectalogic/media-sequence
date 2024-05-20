@@ -17,15 +17,12 @@ export abstract class Media implements Resizable {
     return this._mediaClip;
   }
 
-  public hide() {
-    this.element.style.visibility = 'hidden';
-  }
+  public abstract get element():
+    | HTMLVideoElement
+    | HTMLImageElement
+    | HTMLCanvasElement;
 
-  public show() {
-    this.element.style.visibility = 'visible';
-  }
-
-  public abstract get element(): HTMLElement;
+  public abstract isValidTexture(): boolean;
 
   public abstract resize(width: number, height: number): void;
 
