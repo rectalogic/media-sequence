@@ -4,7 +4,7 @@
 import { Media } from './Media.js';
 import { MediaClip } from './MediaClip.js';
 
-enum State {
+const enum State {
   Paused,
   Playing,
 }

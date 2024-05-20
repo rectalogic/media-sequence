@@ -5,7 +5,7 @@ import createMedia from './MediaFactory.js';
 import { Media } from './Media.js';
 import { MediaClip, isMediaClipArray } from './MediaClip.js';
 
-enum MediaState {
+const enum MediaState {
   Uninitialized = 0,
   Initialized,
   Playing,
