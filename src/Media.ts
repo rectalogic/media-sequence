@@ -6,8 +6,10 @@ import Resizable from './Resizable.js';
 
 // XXX will need to handle the case where we are transitioning video and video/image and one of them stalls/buffers - need to pause the other so they stay in sync?
 
+export type ErrorCallback = (event: ErrorEvent) => void;
+
 export abstract class Media implements Resizable {
-  protected _mediaClip: MediaClip;
+  private _mediaClip: MediaClip;
 
   constructor(mediaClip: MediaClip) {
     this._mediaClip = mediaClip;
@@ -18,11 +20,11 @@ export abstract class Media implements Resizable {
   }
 
   public hide() {
-    this.element.style.visibility = 'hidden';
+    this.element.style.display = 'none';
   }
 
   public show() {
-    this.element.style.visibility = 'visible';
+    this.element.style.display = 'block';
   }
 
   public abstract get element(): HTMLElement;
@@ -44,5 +46,5 @@ export abstract class Media implements Resizable {
 
   public abstract pause(): void;
 
-  public abstract stop(): void;
+  public abstract dispose(): void;
 }

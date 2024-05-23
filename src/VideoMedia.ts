@@ -1,17 +1,21 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
-import { Media } from './Media.js';
+import { Media, ErrorCallback } from './Media.js';
 import { MediaClip } from './MediaClip.js';
 
 export class VideoMedia extends Media {
   private _element: HTMLVideoElement;
 
-  constructor(mediaClip: MediaClip) {
+  constructor(mediaClip: MediaClip, onError: ErrorCallback) {
     super(mediaClip);
     const video = document.createElement('video');
-    video.className = 'video';
-    video.style.visibility = 'hidden';
+    video.addEventListener('error', () =>
+      onError(
+        new ErrorEvent('error', { message: 'Video error', error: video.error }),
+      ),
+    );
+    video.style.display = 'none';
     video.style.objectFit = 'contain'; // XXX make this configurable via MediaClip
     video.preload = 'auto';
     video.crossOrigin = 'anonymous';
@@ -51,9 +55,6 @@ export class VideoMedia extends Media {
   }
 
   public play() {
-    // XXX this can throw
-    // DOMException: The media resource indicated by the src attribute or assigned media provider object was not suitable
-    // XXX need to catch and call error callback
     this._element.play();
   }
 
@@ -61,10 +62,9 @@ export class VideoMedia extends Media {
     this._element.pause();
   }
 
-  public stop() {
+  public dispose() {
     this.pause();
-    this._element.style.visibility = 'hidden';
+    this.hide();
     this._element.removeAttribute('src');
-    this._element.load();
   }
 }

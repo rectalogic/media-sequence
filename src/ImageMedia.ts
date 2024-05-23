@@ -1,7 +1,7 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
-import { Media } from './Media.js';
+import { Media, ErrorCallback } from './Media.js';
 import { MediaClip } from './MediaClip.js';
 
 const enum State {
@@ -22,11 +22,15 @@ export class ImageMedia extends Media {
 
   private _currentTime: number;
 
-  constructor(mediaClip: MediaClip) {
+  constructor(mediaClip: MediaClip, onError: ErrorCallback) {
     super(mediaClip);
     const image = document.createElement('img');
-    image.className = 'image';
-    image.style.visibility = 'hidden';
+    image.addEventListener('error', event =>
+      onError(
+        new ErrorEvent('error', { message: 'Image error', error: event }),
+      ),
+    );
+    image.style.display = 'none';
     image.style.objectFit = 'contain'; // XXX make this configurable via MediaClip
     image.loading = 'eager';
     image.crossOrigin = 'anonymous';
@@ -84,9 +88,9 @@ export class ImageMedia extends Media {
     this.lastTimestamp = undefined;
   }
 
-  public stop() {
+  public dispose() {
     this.pause();
-    this._element.style.visibility = 'hidden';
+    this.hide();
     this._element.removeAttribute('src');
   }
 }

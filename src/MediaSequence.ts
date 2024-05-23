@@ -24,6 +24,8 @@ export class MediaSequence extends HTMLElement {
 
   private loadingMedia?: Media;
 
+  private playlist?: ReadonlyArray<MediaClip>;
+
   private mediaClips?: MediaClip[];
 
   private state = MediaState.Uninitialized;
@@ -82,26 +84,41 @@ export class MediaSequence extends HTMLElement {
   }
 
   private async updatePlaylist(url: string) {
+    this.playlist = undefined;
     this.stop();
     try {
       const response = await fetch(url);
       if (!response.ok) {
-        console.error(response);
         this.state = MediaState.Error;
-        // XXX set error and fire error event
+        this.dispatchEvent(
+          new ErrorEvent('error', {
+            message: `Failed to fetch playlist ${url}`,
+            error: response,
+          }),
+        );
       }
       const json = await response.json();
+
       if (isMediaClipArray(json)) {
-        this.mediaClips = json;
+        this.playlist = json;
+        this.mediaClips = [...this.playlist];
         this.state = MediaState.Initialized;
       } else {
-        // XXX set error and fire error event
         this.state = MediaState.Error;
+        this.dispatchEvent(
+          new ErrorEvent('error', {
+            message: `Invalid playlist contents`,
+          }),
+        );
       }
     } catch (error) {
-      console.error(`Download error: ${error}`);
-      // XXX set error and fire error event
       this.state = MediaState.Error;
+      this.dispatchEvent(
+        new ErrorEvent('error', {
+          message: 'Failed to parse playlist contents',
+          error: error as any,
+        }),
+      );
     }
   }
 
@@ -118,49 +135,58 @@ export class MediaSequence extends HTMLElement {
   }
 
   public play() {
-    if (
-      this.state !== MediaState.Initialized &&
-      this.state !== MediaState.Paused
-    )
-      return;
-    this.state = MediaState.Playing;
-    this.nextVideo();
-    requestAnimationFrame(this.onAnimationFrame);
+    if (this.state === MediaState.Initialized) {
+      this.state = MediaState.Playing;
+      this.nextVideo();
+      requestAnimationFrame(this.onAnimationFrame);
+    } else if (this.state === MediaState.Paused && this.activeMedia) {
+      this.state = MediaState.Playing;
+      this.activeMedia.play();
+      requestAnimationFrame(this.onAnimationFrame);
+    }
   }
 
   public pause() {
-    if (this.state === MediaState.Playing) {
-      // XXX implement pausing
+    if (this.state === MediaState.Playing && this.activeMedia) {
+      this.activeMedia.pause();
       this.state = MediaState.Paused;
     }
   }
 
   public stop() {
     if (this.activeMedia) {
-      MediaSequence.destroyMedia(this.activeMedia);
+      MediaSequence.disposeMedia(this.activeMedia);
       this.shadowRoot?.removeChild(this.activeMedia.element);
       this.activeMedia = undefined;
     }
     if (this.loadingMedia) {
-      MediaSequence.destroyMedia(this.loadingMedia);
+      MediaSequence.disposeMedia(this.loadingMedia);
       this.loadingMedia = undefined;
     }
-    this.mediaClips = undefined;
-    this.state = MediaState.Uninitialized;
+    if (this.playlist) {
+      this.mediaClips = [...this.playlist];
+      this.state = MediaState.Initialized;
+    } else {
+      this.mediaClips = undefined;
+      this.state = MediaState.Uninitialized;
+    }
   }
 
   private createMedia(mediaClip: MediaClip): Media {
-    // XXX pass error callback
-    const media = createMedia(mediaClip);
+    const media = createMedia(mediaClip, this.onError);
     media.resize(this.offsetWidth, this.offsetHeight);
     return media;
   }
 
-  private static destroyMedia(media: Media): undefined {
-    media.pause();
-    media.hide();
+  private static disposeMedia(media: Media): undefined {
+    media.dispose();
     return undefined;
   }
+
+  private onError = (event: ErrorEvent) => {
+    this.stop();
+    this.dispatchEvent(event);
+  };
 
   private onAnimationFrame = (timestamp: number) => {
     if (this.activeMedia && this.mediaClips) {
@@ -195,7 +221,7 @@ export class MediaSequence extends HTMLElement {
       this.activeMedia = this.loadingMedia;
       this.activeMedia.show();
       currentMedia.element.replaceWith(this.activeMedia.element);
-      MediaSequence.destroyMedia(currentMedia);
+      MediaSequence.disposeMedia(currentMedia);
       this.mediaClips.shift();
       this.activeMedia.play();
 
@@ -205,8 +231,7 @@ export class MediaSequence extends HTMLElement {
         this.loadingMedia = undefined;
       }
     } else {
-      this.shadowRoot?.removeChild(this.activeMedia.element);
-      this.activeMedia = MediaSequence.destroyMedia(this.activeMedia);
+      this.stop();
     }
   }
 }

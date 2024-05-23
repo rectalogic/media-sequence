@@ -8,6 +8,12 @@
       }
     </style>
     <script src="../dist/src/media-sequence.js" type="module"></script>
+    <script>
+      window.onload = () => {
+        const ms = document.querySelector('#sequence');
+        ms.addEventListener('error', event => console.log(event.message));
+      };
+    </script>
   </head>
   <body>
     <media-sequence
@@ -19,5 +25,6 @@
     >
     </media-sequence>
     <button onclick="sequence.play()">Play</button>
+    <button onclick="sequence.pause()">Pause</button>
   </body>
 </html>
