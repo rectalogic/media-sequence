@@ -42,6 +42,8 @@ export abstract class Media implements Resizable {
 
   public abstract get ended(): boolean;
 
+  public abstract get playing(): boolean;
+
   public abstract play(): void;
 
   public abstract pause(): void;

@@ -5,14 +5,6 @@ import createMedia from './MediaFactory.js';
 import { Media } from './Media.js';
 import { MediaClip, processMediaClipArray } from './MediaClip.js';
 
-const enum MediaState {
-  Uninitialized = 0,
-  Initialized,
-  Playing,
-  Paused,
-  Error,
-}
-
 export class MediaSequence extends HTMLElement {
   static get observedAttributes(): string[] {
     return ['playlist', 'width', 'height'];
@@ -27,8 +19,6 @@ export class MediaSequence extends HTMLElement {
   private playlist?: ReadonlyArray<MediaClip>;
 
   private mediaClips?: MediaClip[];
-
-  private state = MediaState.Uninitialized;
 
   private resizeObserver: ResizeObserver;
 
@@ -85,11 +75,12 @@ export class MediaSequence extends HTMLElement {
 
   private async updatePlaylist(url: string) {
     this.playlist = undefined;
+    this.mediaClips = undefined;
+    this.activeMedia = undefined;
     this.stop();
     try {
       const response = await fetch(url);
       if (!response.ok) {
-        this.state = MediaState.Error;
         this.dispatchEvent(
           new ErrorEvent('error', {
             message: `Failed to fetch playlist ${url}`,
@@ -102,9 +93,13 @@ export class MediaSequence extends HTMLElement {
 
       this.playlist = processMediaClipArray(json);
       this.mediaClips = [...this.playlist];
-      this.state = MediaState.Initialized;
+
+      this.initialize();
     } catch (error) {
-      this.state = MediaState.Error;
+      this.playlist = undefined;
+      this.mediaClips = undefined;
+      this.activeMedia = undefined;
+
       this.dispatchEvent(
         new ErrorEvent('error', {
           message: 'Failed to parse playlist contents',
@@ -127,21 +122,15 @@ export class MediaSequence extends HTMLElement {
   }
 
   public play() {
-    if (this.state === MediaState.Initialized) {
-      this.state = MediaState.Playing;
-      this.nextVideo();
-      requestAnimationFrame(this.onAnimationFrame);
-    } else if (this.state === MediaState.Paused && this.activeMedia) {
-      this.state = MediaState.Playing;
+    if (this.activeMedia && !this.activeMedia.playing) {
       this.activeMedia.play();
       requestAnimationFrame(this.onAnimationFrame);
     }
   }
 
   public pause() {
-    if (this.state === MediaState.Playing && this.activeMedia) {
+    if (this.activeMedia && this.activeMedia.playing) {
       this.activeMedia.pause();
-      this.state = MediaState.Paused;
     }
   }
 
@@ -157,10 +146,9 @@ export class MediaSequence extends HTMLElement {
     }
     if (this.playlist) {
       this.mediaClips = [...this.playlist];
-      this.state = MediaState.Initialized;
+      this.initialize();
     } else {
       this.mediaClips = undefined;
-      this.state = MediaState.Uninitialized;
     }
   }
 
@@ -190,25 +178,26 @@ export class MediaSequence extends HTMLElement {
       ) {
         this.nextVideo();
       }
+      if (this.activeMedia && this.activeMedia.playing)
+        requestAnimationFrame(this.onAnimationFrame);
     }
-    if (this.state === MediaState.Playing)
-      requestAnimationFrame(this.onAnimationFrame);
   };
 
-  private nextVideo() {
+  private initialize() {
     if (!this.mediaClips) return;
+    this.activeMedia = this.createMedia(this.mediaClips[0]);
+    this.activeMedia.show();
+    this.shadowRoot?.appendChild(this.activeMedia.element);
 
-    // First call, setup initial 2 videos
-    if (!this.activeMedia) {
-      this.activeMedia = this.createMedia(this.mediaClips[0]);
-      this.activeMedia.show();
-      this.shadowRoot?.appendChild(this.activeMedia.element);
-      this.activeMedia.play();
+    if (this.mediaClips.length > 1) {
+      this.loadingMedia = this.createMedia(this.mediaClips[1]);
+    }
+  }
 
-      if (this.mediaClips.length > 1) {
-        this.loadingMedia = this.createMedia(this.mediaClips[1]);
-      }
-    } else if (this.loadingMedia) {
+  private nextVideo() {
+    if (!this.mediaClips || !this.activeMedia) return;
+
+    if (this.loadingMedia) {
       const currentMedia = this.activeMedia;
       this.activeMedia = this.loadingMedia;
       this.activeMedia.show();

@@ -19,8 +19,19 @@ export class VideoMedia extends Media {
     video.style.objectFit = mediaClip.objectFit;
     video.preload = 'auto';
     video.crossOrigin = 'anonymous';
-    video.src = this.mediaClip.src;
-    video.currentTime = this.mediaClip.startTime;
+    // Use media fragments https://www.w3.org/TR/media-frags/
+    if (
+      this.mediaClip.startTime !== 0 ||
+      this.mediaClip.endTime !== undefined
+    ) {
+      const t = [this.mediaClip.startTime];
+      if (this.mediaClip.endTime !== undefined) {
+        t.push(this.mediaClip.endTime);
+      }
+      video.src = new URL(`#t=${t.join()}`, this.mediaClip.src).toString();
+    } else {
+      video.src = this.mediaClip.src;
+    }
     video.load();
     this._element = video;
   }
@@ -52,6 +63,10 @@ export class VideoMedia extends Media {
 
   public get ended() {
     return this._element.ended;
+  }
+
+  public get playing(): boolean {
+    return !this._element.paused && !this._element.ended;
   }
 
   public play() {

@@ -4,17 +4,12 @@
 import { Media, ErrorCallback } from './Media.js';
 import { MediaClip } from './MediaClip.js';
 
-const enum State {
-  Paused,
-  Playing,
-}
-
 export class ImageMedia extends Media {
   private static DEFAULT_DURATION = 5;
 
   private _element: HTMLImageElement;
 
-  private state: State = State.Paused;
+  private _playing: boolean = false;
 
   private lastTimestamp?: number;
 
@@ -61,7 +56,7 @@ export class ImageMedia extends Media {
   }
 
   public get currentTime() {
-    if (this.state === State.Paused || this.currentTimestamp === undefined)
+    if (!this.playing || this.currentTimestamp === undefined)
       return this._currentTime;
     if (this.lastTimestamp === undefined)
       this.lastTimestamp = this.currentTimestamp;
@@ -77,13 +72,17 @@ export class ImageMedia extends Media {
     );
   }
 
+  public get playing(): boolean {
+    return this._playing;
+  }
+
   public play() {
-    this.state = State.Playing;
+    this._playing = true;
     this.lastTimestamp = this.currentTimestamp;
   }
 
   public pause() {
-    this.state = State.Paused;
+    this._playing = false;
     this.currentTimestamp = undefined;
     this.lastTimestamp = undefined;
   }

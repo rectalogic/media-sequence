@@ -34,7 +34,7 @@ function processMediaClip(mediaClip: any): MediaClip {
     }
     return mc;
   }
-  throw mediaClip;
+  throw new Error('Invalid mediaClip', { cause: mediaClip });
 }
 
 export function processMediaClipArray(mediaClips: any): MediaClip[] {
