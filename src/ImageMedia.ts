@@ -31,12 +31,12 @@ export class ImageMedia extends Media {
       ),
     );
     image.style.display = 'none';
-    image.style.objectFit = 'contain'; // XXX make this configurable via MediaClip
+    image.style.objectFit = mediaClip.objectFit;
     image.loading = 'eager';
     image.crossOrigin = 'anonymous';
     image.src = this.mediaClip.src;
     this._element = image;
-    this._currentTime = mediaClip.startTime || 0;
+    this._currentTime = mediaClip.startTime;
   }
 
   public get element() {

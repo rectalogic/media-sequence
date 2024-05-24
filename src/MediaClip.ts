@@ -1,23 +1,45 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
+const ObjectFits = ['fill', 'contain', 'cover', 'none', 'scale-down'] as const;
+type ObjectFit = (typeof ObjectFits)[number];
+
+const isObjectFit = (value: string): value is ObjectFit =>
+  ObjectFits.includes(value as ObjectFit);
+
 export interface MediaClip {
   readonly type: 'video' | 'image';
   readonly src: string;
-  readonly startTime?: number;
+  readonly startTime: number;
   readonly endTime?: number;
+  readonly objectFit: ObjectFit;
 }
 
-function isMediaClip(mediaClip: any): mediaClip is MediaClip {
-  return (
+function processMediaClip(mediaClip: any): MediaClip {
+  if (
     (mediaClip.type === 'video' || mediaClip.type === 'image') &&
     typeof mediaClip.src === 'string' &&
     (mediaClip.startTime === undefined ||
       typeof mediaClip.startTime === 'number') &&
-    (mediaClip.endTime === undefined || typeof mediaClip.endTime === 'number')
-  );
+    (mediaClip.endTime === undefined ||
+      typeof mediaClip.endTime === 'number') &&
+    (mediaClip.objectFit === undefined || isObjectFit(mediaClip.objectFit))
+  ) {
+    let mc = mediaClip;
+    if (mc.startTime === undefined) {
+      mc = { ...mc, startTime: 0 };
+    }
+    if (mc.objectFit === undefined) {
+      mc = { ...mc, objectFit: 'contain' };
+    }
+    return mc;
+  }
+  throw mediaClip;
 }
 
-export function isMediaClipArray(mediaClips: any): mediaClips is MediaClip[] {
-  return Array.isArray(mediaClips) && mediaClips.every(isMediaClip);
+export function processMediaClipArray(mediaClips: any): MediaClip[] {
+  if (Array.isArray(mediaClips)) {
+    return mediaClips.map(mc => processMediaClip(mc));
+  }
+  throw new Error('Not an array');
 }

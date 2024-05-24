@@ -3,7 +3,7 @@
 
 import createMedia from './MediaFactory.js';
 import { Media } from './Media.js';
-import { MediaClip, isMediaClipArray } from './MediaClip.js';
+import { MediaClip, processMediaClipArray } from './MediaClip.js';
 
 const enum MediaState {
   Uninitialized = 0,
@@ -97,20 +97,12 @@ export class MediaSequence extends HTMLElement {
           }),
         );
       }
+
       const json = await response.json();
 
-      if (isMediaClipArray(json)) {
-        this.playlist = json;
-        this.mediaClips = [...this.playlist];
-        this.state = MediaState.Initialized;
-      } else {
-        this.state = MediaState.Error;
-        this.dispatchEvent(
-          new ErrorEvent('error', {
-            message: `Invalid playlist contents`,
-          }),
-        );
-      }
+      this.playlist = processMediaClipArray(json);
+      this.mediaClips = [...this.playlist];
+      this.state = MediaState.Initialized;
     } catch (error) {
       this.state = MediaState.Error;
       this.dispatchEvent(

@@ -16,11 +16,11 @@ export class VideoMedia extends Media {
       ),
     );
     video.style.display = 'none';
-    video.style.objectFit = 'contain'; // XXX make this configurable via MediaClip
+    video.style.objectFit = mediaClip.objectFit;
     video.preload = 'auto';
     video.crossOrigin = 'anonymous';
     video.src = this.mediaClip.src;
-    video.currentTime = this.mediaClip.startTime || 0;
+    video.currentTime = this.mediaClip.startTime;
     video.load();
     this._element = video;
   }
