@@ -43,6 +43,14 @@ export class ImageMedia extends Media {
     this._element.height = height;
   }
 
+  public get width(): number {
+    return this.element.width;
+  }
+
+  public get height(): number {
+    return this.element.width;
+  }
+
   public get intrinsicWidth() {
     return this._element.naturalWidth;
   }

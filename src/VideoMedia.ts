@@ -47,6 +47,14 @@ export class VideoMedia extends Media {
     this._element.height = height;
   }
 
+  public get width(): number {
+    return this.element.width;
+  }
+
+  public get height(): number {
+    return this.element.width;
+  }
+
   // XXX intrinsice size can change during playback, fires resize event. May need to listen for this to recompute aspect ratio
 
   public get intrinsicWidth() {

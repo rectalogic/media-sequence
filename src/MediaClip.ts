@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 const ObjectFits = ['fill', 'contain', 'cover', 'none', 'scale-down'] as const;
-type ObjectFit = (typeof ObjectFits)[number];
+export type ObjectFit = (typeof ObjectFits)[number];
 
 const isObjectFit = (value: string): value is ObjectFit =>
   ObjectFits.includes(value as ObjectFit);

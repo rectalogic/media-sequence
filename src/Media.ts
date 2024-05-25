@@ -31,6 +31,10 @@ export abstract class Media implements Resizable {
 
   public abstract resize(width: number, height: number): void;
 
+  public abstract get width(): number;
+
+  public abstract get height(): number;
+
   public abstract get intrinsicWidth(): number;
 
   public abstract get intrinsicHeight(): number;
