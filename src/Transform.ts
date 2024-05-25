@@ -69,6 +69,8 @@ export class WebAnimationTransform extends Transform {
       this.media.duration * 1000,
     );
     this.animation = new Animation(effect, document.timeline);
+    this.animation.play();
+    this.animation.pause();
   }
 
   public update() {

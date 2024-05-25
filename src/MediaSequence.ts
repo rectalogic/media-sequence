@@ -10,6 +10,8 @@ export class MediaSequence extends HTMLElement {
     return ['playlist', 'width', 'height'];
   }
 
+  private container: HTMLDivElement;
+
   private sheet: CSSStyleSheet;
 
   private activeMedia?: Media;
@@ -32,6 +34,12 @@ export class MediaSequence extends HTMLElement {
   constructor() {
     super();
     const shadow = this.attachShadow({ mode: 'open' });
+
+    const container = document.createElement('div');
+    container.className = 'container';
+    shadow.appendChild(container);
+    this.container = container;
+
     this.sheet = new CSSStyleSheet();
     this.updateSize();
     shadow.adoptedStyleSheets.push(this.sheet);
@@ -118,6 +126,12 @@ export class MediaSequence extends HTMLElement {
         width: ${width !== null ? `${width}px` : 'auto'};
         height: ${height !== null ? `${height}px` : 'auto'};
       }
+      .container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
     `);
   }
 
@@ -137,7 +151,7 @@ export class MediaSequence extends HTMLElement {
   public stop() {
     if (this.activeMedia) {
       MediaSequence.disposeMedia(this.activeMedia);
-      this.shadowRoot?.removeChild(this.activeMedia.element);
+      this.container.removeChild(this.activeMedia.element);
       this.activeMedia = undefined;
     }
     if (this.loadingMedia) {
@@ -187,7 +201,7 @@ export class MediaSequence extends HTMLElement {
     if (!this.mediaClips) return;
     this.activeMedia = this.createMedia(this.mediaClips[0]);
     this.activeMedia.show();
-    this.shadowRoot?.appendChild(this.activeMedia.element);
+    this.container.appendChild(this.activeMedia.element);
 
     if (this.mediaClips.length > 1) {
       this.loadingMedia = this.createMedia(this.mediaClips[1]);
