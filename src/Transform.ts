@@ -1,20 +1,18 @@
+/* eslint-disable max-classes-per-file */
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
 import { Media } from './Media.js';
 
-namespace Transform {
-  // Defined inside a namespace to avoid shadowing global dom Keyframe interface
-  export interface Keyframe {
-    readonly offset: number; // Percentage when keyframe becomes active, 0..1
-    readonly scale: number;
-    readonly rotate: number; // degrees
-    readonly translateX: number; // NDC coordinates, -1..1
-    readonly translateY: number; // NDC coordinates, -1..1
-  }
+export interface TransformKeyframe {
+  readonly offset: number; // Percentage when keyframe becomes active, 0..1
+  readonly scale: number;
+  readonly rotate: number; // degrees
+  readonly translateX: number; // NDC coordinates, -1..1
+  readonly translateY: number; // NDC coordinates, -1..1
 }
 
-function processKeyframe(keyframe: any): Transform.Keyframe {
+function processKeyframe(keyframe: any): TransformKeyframe {
   let kf = keyframe;
   if (
     typeof kf.offset === 'number' &&
@@ -39,35 +37,70 @@ function processKeyframe(keyframe: any): Transform.Keyframe {
   return kf;
 }
 
-// eslint-disable-next-line no-redeclare
-export default class Transform {
-  private media: Media;
+export function processKeyframes(keyframes: any): TransformKeyframe[] {
+  if (Array.isArray(keyframes)) {
+    return keyframes.map(kf => processKeyframe(kf));
+  }
+  throw new Error('Transform keyframes are not an array');
+}
 
-  private keyframes: Transform.Keyframe[];
+abstract class Transform {
+  protected media: Media;
 
-  private objectFitMatrix?: DOMMatrix;
+  protected keyframes: TransformKeyframe[];
 
-  constructor(media: Media, keyframes: Transform.Keyframe[]) {
+  constructor(media: Media, keyframes: TransformKeyframe[]) {
     this.media = media;
     this.keyframes = keyframes;
   }
 
-  public buildWebAnimationKeyframes(): Keyframe[] {
-    return this.keyframes.map(kf => this.toWebAnimationKeyframe(kf));
+  public abstract apply(): void;
+
+  public abstract update(): void;
+}
+
+export class WebAnimationTransform extends Transform {
+  private animation?: Animation;
+
+  public apply() {
+    const effect = new KeyframeEffect(
+      this.media.element,
+      this.keyframes.map(kf => this.toWebAnimationKeyframe(kf)),
+      this.media.duration * 1000,
+    );
+    this.animation = new Animation(effect, document.timeline);
   }
 
-  // XXX should return a WebAnimation Keyframe - how do we access that? and avoid shadowing it
-  private toWebAnimationKeyframe(keyframe: Transform.Keyframe): Keyframe {
-    // XXX optimize out scale/rotate/translate if default
+  public update() {
+    if (this.animation) {
+      this.animation.currentTime =
+        (this.media.currentTime - this.media.mediaClip.startTime) * 1000;
+    }
+  }
+
+  private toWebAnimationKeyframe(keyframe: TransformKeyframe): Keyframe {
+    const transforms = [];
+    if (keyframe.scale !== 1) transforms.push(`scale(${keyframe.scale})`);
+    if (keyframe.rotate !== 0) transforms.push(`rotate(${keyframe.rotate}deg)`);
+    if (keyframe.translateX !== 0 || keyframe.translateY !== 0)
+      transforms.push(
+        `translate(${keyframe.translateX * this.media.width}px, ${
+          keyframe.translateY * this.media.height
+        }px)`,
+      );
     return {
       offset: keyframe.offset,
-      transform: `transform: scale(${keyframe.scale}) rotate(${
-        keyframe.rotate
-      }deg) translate(${keyframe.translateX * this.media.width}px, ${
-        keyframe.translateY * this.media.height
-      }px)`,
+      transform: transforms.length > 0 ? transforms.join(' ') : 'none',
     };
   }
+}
+
+export class CanvasImageTransform extends Transform {
+  private objectFitMatrix?: DOMMatrix;
+
+  public apply() {}
+
+  public update() {}
 
   public buildMatrix(time: number): DOMMatrix {
     if (!this.objectFitMatrix)

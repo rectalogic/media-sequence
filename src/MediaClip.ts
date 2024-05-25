@@ -1,6 +1,8 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
+import { TransformKeyframe, processKeyframes } from './Transform.js';
+
 const ObjectFits = ['fill', 'contain', 'cover', 'none', 'scale-down'] as const;
 export type ObjectFit = (typeof ObjectFits)[number];
 
@@ -13,6 +15,7 @@ export interface MediaClip {
   readonly startTime: number;
   readonly endTime?: number;
   readonly objectFit: ObjectFit;
+  readonly keyframes?: TransformKeyframe[];
 }
 
 function processMediaClip(mediaClip: any): MediaClip {
@@ -32,6 +35,8 @@ function processMediaClip(mediaClip: any): MediaClip {
     if (mc.objectFit === undefined) {
       mc = { ...mc, objectFit: 'contain' };
     }
+    if (mc.keyframes !== undefined)
+      mc = { ...mc, keyframes: processKeyframes(mc.keyframes) };
     return mc;
   }
   throw new Error('Invalid mediaClip', { cause: mediaClip });
@@ -41,5 +46,5 @@ export function processMediaClipArray(mediaClips: any): MediaClip[] {
   if (Array.isArray(mediaClips)) {
     return mediaClips.map(mc => processMediaClip(mc));
   }
-  throw new Error('Not an array');
+  throw new Error('MediaClips are not an array');
 }

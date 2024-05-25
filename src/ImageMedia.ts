@@ -60,6 +60,7 @@ export class ImageMedia extends Media {
   }
 
   public override set animationTime(timestamp: number) {
+    super.animationTime = timestamp;
     this.currentTimestamp = timestamp;
   }
 
@@ -73,10 +74,17 @@ export class ImageMedia extends Media {
     return this._currentTime;
   }
 
+  public get duration() {
+    return this.mediaClip.endTime === undefined
+      ? ImageMedia.DEFAULT_DURATION
+      : this.mediaClip.endTime - this.mediaClip.startTime;
+  }
+
   public get ended() {
     return (
       this.currentTime >=
-      (this.mediaClip.endTime || ImageMedia.DEFAULT_DURATION)
+      (this.mediaClip.endTime ||
+        this.mediaClip.startTime + ImageMedia.DEFAULT_DURATION)
     );
   }
 

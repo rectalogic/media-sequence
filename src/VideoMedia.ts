@@ -69,6 +69,14 @@ export class VideoMedia extends Media {
     return this._element.currentTime;
   }
 
+  public get duration() {
+    return (
+      (this.mediaClip.endTime === undefined
+        ? this.element.duration
+        : this.mediaClip.endTime) - this.mediaClip.startTime
+    );
+  }
+
   public get ended() {
     return this._element.ended;
   }
