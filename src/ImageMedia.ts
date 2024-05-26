@@ -60,8 +60,8 @@ export class ImageMedia extends Media {
   }
 
   public override set animationTime(timestamp: number) {
-    super.animationTime = timestamp;
     this.currentTimestamp = timestamp;
+    super.animationTime = timestamp;
   }
 
   public get currentTime() {
@@ -94,7 +94,8 @@ export class ImageMedia extends Media {
 
   public play() {
     this._playing = true;
-    this.lastTimestamp = this.currentTimestamp;
+    this.currentTimestamp = undefined;
+    this.lastTimestamp = undefined;
   }
 
   public pause() {
