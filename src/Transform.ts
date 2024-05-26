@@ -20,12 +20,8 @@ function processKeyframe(keyframe: any): TransformKeyframe {
     kf.offset <= 1.0 &&
     (kf.scale === undefined || typeof kf.scale === 'number') &&
     (kf.rotate === undefined || typeof kf.rotate === 'number') &&
-    (kf.translateX === undefined ||
-      (typeof kf.translateX === 'number' &&
-        (kf.translateX >= -1 || kf.translateX <= 1))) &&
-    (kf.translateY === undefined ||
-      (typeof kf.translateY === 'number' &&
-        (kf.translateY >= -1 || kf.translateY <= 1)))
+    (kf.translateX === undefined || typeof kf.translateX === 'number') &&
+    (kf.translateY === undefined || typeof kf.translateY === 'number')
   ) {
     if (kf.scale === undefined) kf = { ...kf, scale: 1 };
     if (kf.rotate === undefined) kf = { ...kf, rotate: 0 };
@@ -82,14 +78,14 @@ export class WebAnimationTransform extends Transform {
 
   private toWebAnimationKeyframe(keyframe: TransformKeyframe): Keyframe {
     const transforms = [];
-    if (keyframe.scale !== 1) transforms.push(`scale(${keyframe.scale})`);
-    if (keyframe.rotate !== 0) transforms.push(`rotate(${keyframe.rotate}deg)`);
     if (keyframe.translateX !== 0 || keyframe.translateY !== 0)
       transforms.push(
         `translate(${keyframe.translateX * this.media.width}px, ${
           keyframe.translateY * this.media.height
         }px)`,
       );
+    if (keyframe.scale !== 1) transforms.push(`scale(${keyframe.scale})`);
+    if (keyframe.rotate !== 0) transforms.push(`rotate(${keyframe.rotate}deg)`);
     return {
       offset: keyframe.offset,
       transform: transforms.length > 0 ? transforms.join(' ') : 'none',
@@ -121,10 +117,10 @@ export class CanvasImageTransform extends Transform {
   ): DOMMatrix {
     const matrix = new DOMMatrix();
     matrix.translateSelf(this.media.width / 2, this.media.height / 2);
-    if (scale !== 1) matrix.scaleSelf(scale, scale);
-    if (rotate !== 0) matrix.rotateSelf(0, 0, rotate);
     if (translateX !== 0 || translateY !== 0)
       matrix.translateSelf(translateX, translateY);
+    if (scale !== 1) matrix.scaleSelf(scale, scale);
+    if (rotate !== 0) matrix.rotateSelf(0, 0, rotate);
     matrix.translateSelf(-this.media.width / 2, -this.media.height / 2);
     return matrix;
   }
