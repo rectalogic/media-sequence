@@ -59,11 +59,12 @@ export class MediaSequence extends HTMLElement {
       for (const entry of entries) {
         if (entry.target === this) {
           const size = entry.contentBoxSize[0];
-          this.updateCanvasSize(
-            size.inlineSize,
-            size.blockSize,
-            this.activeMedia,
-          );
+          if (this.activeMedia)
+            this.updateCanvasSize(
+              size.inlineSize,
+              size.blockSize,
+              this.activeMedia,
+            );
         }
       }
     });
@@ -129,23 +130,28 @@ export class MediaSequence extends HTMLElement {
   }
 
   private draw(media?: Media) {
-    if (media)
-      this.ctx2d.drawImage(
-        media.element,
-        0,
-        0,
-        this.ctx2d.canvas.width,
-        this.ctx2d.canvas.height,
-      );
+    if (media) this.ctx2d.drawImage(media.element, 0, 0);
   }
 
-  private updateCanvasSize(width: number, height: number, media?: Media) {
+  private updateCanvasSize(width: number, height: number, media: Media) {
     //XXX intrinsic may be 0
-    this.ctx2d.canvas.width = Math.min(width * 2, media?.intrinsicWidth || 0);
-    this.ctx2d.canvas.height = Math.min(
-      height * 2,
-      media?.intrinsicHeight || 0,
+    // For high quality scaling, double the canvas size but render at half size
+    let containerWidth;
+    let containerHeight;
+    if (width > media.intrinsicWidth && height > media.intrinsicHeight) {
+      containerWidth = width;
+      containerHeight = height;
+    } else {
+      containerWidth = width * 2;
+      containerHeight = height * 2;
+    }
+    this.ctx2d.canvas.width = containerWidth;
+    this.ctx2d.canvas.height = containerHeight;
+    const matrix = media.computeObjectFitMatrix(
+      containerWidth,
+      containerHeight,
     );
+    this.ctx2d.setTransform(matrix);
   }
 
   private onSizeAttributesChanged() {

@@ -15,7 +15,7 @@ export class VideoMedia extends Media {
     super(mediaClip);
     const video = document.createElement('video');
     video.addEventListener('error', () => onError('Video error', video.error));
-    video.addEventListener('loadeddata', () => {
+    video.addEventListener('canplay', () => {
       this.loaded = true;
       onLoad(this);
     });
