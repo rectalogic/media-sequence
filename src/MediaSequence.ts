@@ -10,7 +10,9 @@ export class MediaSequence extends HTMLElement {
     return ['playlist', 'width', 'height'];
   }
 
-  private container: HTMLDivElement;
+  private shadow: ShadowRoot;
+
+  private ctx2d: CanvasRenderingContext2D;
 
   private sheet: CSSStyleSheet;
 
@@ -33,26 +35,35 @@ export class MediaSequence extends HTMLElement {
 
   constructor() {
     super();
-    const shadow = this.attachShadow({ mode: 'open' });
+    this.shadow = this.attachShadow({ mode: 'open' });
 
-    const container = document.createElement('div');
-    container.className = 'container';
-    shadow.appendChild(container);
-    this.container = container;
-
+    const canvas = document.createElement('canvas');
+    canvas.className = 'canvas';
+    this.shadow.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Failed to get canvas 2d context');
+    this.ctx2d = ctx;
     this.sheet = new CSSStyleSheet();
-    this.updateSize();
-    shadow.adoptedStyleSheets.push(this.sheet);
+    this.onSizeAttributesChanged();
+    const canvasSheet = new CSSStyleSheet();
+    canvasSheet.replaceSync(`
+      .canvas {
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
+    `);
+    this.shadow.adoptedStyleSheets.push(canvasSheet, this.sheet);
 
     this.resizeObserver = new ResizeObserver(entries => {
-      if (!(this.activeMedia || this.loadingMedia)) return;
       for (const entry of entries) {
         if (entry.target === this) {
           const size = entry.contentBoxSize[0];
-          if (this.activeMedia)
-            this.activeMedia.resize(size.inlineSize, size.blockSize);
-          if (this.loadingMedia)
-            this.loadingMedia.resize(size.inlineSize, size.blockSize);
+          this.updateCanvasSize(
+            size.inlineSize,
+            size.blockSize,
+            this.activeMedia,
+          );
         }
       }
     });
@@ -72,7 +83,7 @@ export class MediaSequence extends HTMLElement {
     switch (attr) {
       case 'width':
       case 'height':
-        this.updateSize();
+        this.onSizeAttributesChanged();
         break;
       case 'playlist':
         this.updatePlaylist(newValue);
@@ -117,7 +128,27 @@ export class MediaSequence extends HTMLElement {
     }
   }
 
-  private updateSize() {
+  private draw(media?: Media) {
+    if (media)
+      this.ctx2d.drawImage(
+        media.element,
+        0,
+        0,
+        this.ctx2d.canvas.width,
+        this.ctx2d.canvas.height,
+      );
+  }
+
+  private updateCanvasSize(width: number, height: number, media?: Media) {
+    //XXX intrinsic may be 0
+    this.ctx2d.canvas.width = Math.min(width * 2, media?.intrinsicWidth || 0);
+    this.ctx2d.canvas.height = Math.min(
+      height * 2,
+      media?.intrinsicHeight || 0,
+    );
+  }
+
+  private onSizeAttributesChanged() {
     const width = this.getAttribute('width');
     const height = this.getAttribute('height');
     this.sheet.replaceSync(`
@@ -125,12 +156,6 @@ export class MediaSequence extends HTMLElement {
         display: inline-block;
         width: ${width !== null ? `${width}px` : 'auto'};
         height: ${height !== null ? `${height}px` : 'auto'};
-      }
-      .container {
-        position: relative;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
       }
     `);
   }
@@ -150,12 +175,11 @@ export class MediaSequence extends HTMLElement {
 
   public stop() {
     if (this.activeMedia) {
-      MediaSequence.disposeMedia(this.activeMedia);
-      this.container.removeChild(this.activeMedia.element);
+      this.disposeMedia(this.activeMedia);
       this.activeMedia = undefined;
     }
     if (this.loadingMedia) {
-      MediaSequence.disposeMedia(this.loadingMedia);
+      this.disposeMedia(this.loadingMedia);
       this.loadingMedia = undefined;
     }
     if (this.playlist) {
@@ -167,19 +191,25 @@ export class MediaSequence extends HTMLElement {
   }
 
   private createMedia(mediaClip: MediaClip): Media {
-    const media = createMedia(mediaClip, this.onError);
-    media.resize(this.offsetWidth, this.offsetHeight);
+    const media = createMedia(mediaClip, this.onMediaLoad, this.onMediaError);
     return media;
   }
 
-  private static disposeMedia(media: Media): undefined {
+  private disposeMedia(media: Media): undefined {
     media.dispose();
     return undefined;
   }
 
-  private onError = (event: ErrorEvent) => {
+  private onMediaLoad = (media: Media) => {
+    if (media === this.activeMedia) {
+      this.updateCanvasSize(this.offsetWidth, this.offsetHeight, media);
+      this.draw(media);
+    }
+  };
+
+  private onMediaError = (message: string, cause: any) => {
     this.stop();
-    this.dispatchEvent(event);
+    this.dispatchEvent(new ErrorEvent(message, { error: cause }));
   };
 
   private onAnimationFrame = (timestamp: number) => {
@@ -192,16 +222,24 @@ export class MediaSequence extends HTMLElement {
       ) {
         this.nextVideo();
       }
-      if (this.activeMedia && this.activeMedia.playing)
+      if (this.activeMedia && this.activeMedia.playing) {
+        this.draw(this.activeMedia);
         requestAnimationFrame(this.onAnimationFrame);
+      }
     }
   };
 
   private initialize() {
     if (!this.mediaClips) return;
     this.activeMedia = this.createMedia(this.mediaClips[0]);
-    this.activeMedia.show();
-    this.container.appendChild(this.activeMedia.element);
+    if (this.activeMedia.loaded) {
+      this.updateCanvasSize(
+        this.offsetWidth,
+        this.offsetHeight,
+        this.activeMedia,
+      );
+      this.draw(this.activeMedia);
+    }
 
     if (this.mediaClips.length > 1) {
       this.loadingMedia = this.createMedia(this.mediaClips[1]);
@@ -214,9 +252,15 @@ export class MediaSequence extends HTMLElement {
     if (this.loadingMedia) {
       const currentMedia = this.activeMedia;
       this.activeMedia = this.loadingMedia;
-      this.activeMedia.show();
-      currentMedia.element.replaceWith(this.activeMedia.element);
-      MediaSequence.disposeMedia(currentMedia);
+      if (this.activeMedia.loaded) {
+        this.updateCanvasSize(
+          this.offsetWidth,
+          this.offsetHeight,
+          this.activeMedia,
+        );
+        this.draw(this.activeMedia);
+      }
+      this.disposeMedia(currentMedia);
       this.mediaClips.shift();
       this.activeMedia.play();
 

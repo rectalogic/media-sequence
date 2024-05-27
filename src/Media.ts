@@ -2,15 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 import { MediaClip } from './MediaClip.js';
-import Resizable from './Resizable.js';
-import { WebAnimationTransform } from './Transform.js';
 
 // XXX will need to handle the case where we are transitioning video and video/image and one of them stalls/buffers - need to pause the other so they stay in sync?
 
-export type ErrorCallback = (event: ErrorEvent) => void;
-
-export abstract class Media implements Resizable {
+export abstract class Media {
   private _mediaClip: MediaClip;
+
+  private _loaded: boolean = false;
 
   constructor(mediaClip: MediaClip) {
     this._mediaClip = mediaClip;
@@ -20,30 +18,15 @@ export abstract class Media implements Resizable {
     return this._mediaClip;
   }
 
-  public hide() {
-    this.element.style.display = 'none';
+  public abstract get element(): HTMLVideoElement | HTMLImageElement;
+
+  public get loaded(): boolean {
+    return this._loaded;
   }
 
-  private transform?: WebAnimationTransform; // XXX hack
-
-  public show() {
-    this.element.style.display = 'block';
-    // XXX deal with canvas transform too
-    if (this.mediaClip.keyframes)
-      this.transform = new WebAnimationTransform(
-        this,
-        this.mediaClip.keyframes,
-      );
-    this.transform?.apply();
+  protected set loaded(value: boolean) {
+    this._loaded = value;
   }
-
-  public abstract get element(): HTMLElement;
-
-  public abstract resize(width: number, height: number): void;
-
-  public abstract get width(): number;
-
-  public abstract get height(): number;
 
   public abstract get intrinsicWidth(): number;
 
@@ -55,7 +38,7 @@ export abstract class Media implements Resizable {
 
   // eslint-disable-next-line class-methods-use-this, no-empty-function
   public set animationTime(timestamp: number) {
-    this.transform?.update();
+    // XXX update transform if any
   }
 
   public abstract get ended(): boolean;
@@ -68,3 +51,6 @@ export abstract class Media implements Resizable {
 
   public abstract dispose(): void;
 }
+
+export type MediaLoadCallback = (media: Media) => void;
+export type MediaErrorCallback = (message: string, cause: any) => void;

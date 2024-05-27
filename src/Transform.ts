@@ -41,6 +41,7 @@ export function processKeyframes(keyframes: any): TransformKeyframe[] {
 }
 
 abstract class Transform {
+  /*
   protected media: Media;
 
   protected keyframes: TransformKeyframe[];
@@ -177,4 +178,5 @@ export class CanvasImageTransform extends Transform {
     matrix.scaleSelf(scaleX, scaleY);
     return matrix;
   }
+  */
 }

@@ -1,7 +1,7 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
-import { Media, ErrorCallback } from './Media.js';
+import { Media, MediaLoadCallback, MediaErrorCallback } from './Media.js';
 import { MediaClip } from './MediaClip.js';
 
 export class ImageMedia extends Media {
@@ -17,16 +17,18 @@ export class ImageMedia extends Media {
 
   private _currentTime: number;
 
-  constructor(mediaClip: MediaClip, onError: ErrorCallback) {
+  constructor(
+    mediaClip: MediaClip,
+    onLoad: MediaLoadCallback,
+    onError: MediaErrorCallback,
+  ) {
     super(mediaClip);
     const image = document.createElement('img');
-    image.addEventListener('error', event =>
-      onError(
-        new ErrorEvent('error', { message: 'Image error', error: event }),
-      ),
-    );
-    image.style.display = 'none';
-    image.style.objectFit = mediaClip.objectFit;
+    image.addEventListener('error', event => onError('Image error', event));
+    image.addEventListener('load', () => {
+      this.loaded = true;
+      onLoad(this);
+    });
     image.loading = 'eager';
     image.crossOrigin = 'anonymous';
     image.src = this.mediaClip.src;
@@ -36,19 +38,6 @@ export class ImageMedia extends Media {
 
   public get element() {
     return this._element;
-  }
-
-  public resize(width: number, height: number) {
-    this._element.width = width;
-    this._element.height = height;
-  }
-
-  public get width(): number {
-    return this.element.width;
-  }
-
-  public get height(): number {
-    return this.element.width;
   }
 
   public get intrinsicWidth() {
@@ -106,7 +95,6 @@ export class ImageMedia extends Media {
 
   public dispose() {
     this.pause();
-    this.hide();
     this._element.removeAttribute('src');
   }
 }
