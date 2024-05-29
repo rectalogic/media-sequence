@@ -1,50 +1,25 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
-import { TransformKeyframe, processKeyframes } from './Transform.js';
+import * as D from 'decoders';
 
-const ObjectFits = ['fill', 'contain', 'cover', 'none', 'scale-down'] as const;
-export type ObjectFit = (typeof ObjectFits)[number];
+import { keyframesDecoder } from './Transform.js';
 
-const isObjectFit = (value: string): value is ObjectFit =>
-  ObjectFits.includes(value as ObjectFit);
+const mediaClipDecoder = D.object({
+  type: D.oneOf(['video', 'image']),
+  src: D.string,
+  startTime: D.optional(D.number, 0),
+  endTime: D.optional(D.number),
+  objectFit: D.optional(
+    D.oneOf(['fill', 'contain', 'cover', 'none', 'scale-down']),
+    'contain',
+  ),
+  keyframes: D.optional(keyframesDecoder),
+});
+const mediaClipsDecoder = D.array(mediaClipDecoder);
 
-export interface MediaClip {
-  readonly type: 'video' | 'image';
-  readonly src: string;
-  readonly startTime: number;
-  readonly endTime?: number;
-  readonly objectFit: ObjectFit;
-  readonly keyframes?: TransformKeyframe[];
-}
+export type MediaClip = D.DecoderType<typeof mediaClipDecoder>;
 
-function processMediaClip(mediaClip: any): MediaClip {
-  if (
-    (mediaClip.type === 'video' || mediaClip.type === 'image') &&
-    typeof mediaClip.src === 'string' &&
-    (mediaClip.startTime === undefined ||
-      typeof mediaClip.startTime === 'number') &&
-    (mediaClip.endTime === undefined ||
-      typeof mediaClip.endTime === 'number') &&
-    (mediaClip.objectFit === undefined || isObjectFit(mediaClip.objectFit))
-  ) {
-    let mc = mediaClip;
-    if (mc.startTime === undefined) {
-      mc = { ...mc, startTime: 0 };
-    }
-    if (mc.objectFit === undefined) {
-      mc = { ...mc, objectFit: 'contain' };
-    }
-    if (mc.keyframes !== undefined)
-      mc = { ...mc, keyframes: processKeyframes(mc.keyframes) };
-    return mc;
-  }
-  throw new Error('Invalid mediaClip', { cause: mediaClip });
-}
-
-export function processMediaClipArray(mediaClips: any): MediaClip[] {
-  if (Array.isArray(mediaClips)) {
-    return mediaClips.map(mc => processMediaClip(mc));
-  }
-  throw new Error('MediaClips are not an array');
+export function processMediaClipArray(mediaClips: unknown): MediaClip[] {
+  return mediaClipsDecoder.verify(mediaClips);
 }

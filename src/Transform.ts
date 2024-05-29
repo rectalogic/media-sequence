@@ -2,42 +2,23 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
+import * as D from 'decoders';
 import { Media } from './Media.js';
 
-export interface TransformKeyframe {
-  readonly offset: number; // Percentage when keyframe becomes active, 0..1
-  readonly scale: number;
-  readonly rotate: number; // degrees
-  readonly translateX: number; // NDC coordinates, -1..1
-  readonly translateY: number; // NDC coordinates, -1..1
-}
+const keyframeDecoder = D.exact({
+  offset: D.number.refine(n => n >= 0 && n <= 1, 'Must be between 0 and 1'),
+  scale: D.optional(D.number, 1),
+  rotate: D.optional(D.number, 0),
+  translateX: D.optional(D.number, 0),
+  translateY: D.optional(D.number, 0),
+});
 
-function processKeyframe(keyframe: any): TransformKeyframe {
-  let kf = keyframe;
-  if (
-    typeof kf.offset === 'number' &&
-    kf.offset >= 0 &&
-    kf.offset <= 1.0 &&
-    (kf.scale === undefined || typeof kf.scale === 'number') &&
-    (kf.rotate === undefined || typeof kf.rotate === 'number') &&
-    (kf.translateX === undefined || typeof kf.translateX === 'number') &&
-    (kf.translateY === undefined || typeof kf.translateY === 'number')
-  ) {
-    if (kf.scale === undefined) kf = { ...kf, scale: 1 };
-    if (kf.rotate === undefined) kf = { ...kf, rotate: 0 };
-    if (kf.translateX === undefined) kf = { ...kf, translateX: 0 };
-    if (kf.translateY === undefined) kf = { ...kf, translateY: 0 };
-  } else {
-    throw new Error('Invalid Keyframe', { cause: keyframe });
-  }
-  return kf;
-}
+export const keyframesDecoder = D.array(keyframeDecoder);
 
-export function processKeyframes(keyframes: any): TransformKeyframe[] {
-  if (Array.isArray(keyframes)) {
-    return keyframes.map(kf => processKeyframe(kf));
-  }
-  throw new Error('Transform keyframes are not an array');
+export type TransformKeyframe = D.DecoderType<typeof keyframeDecoder>;
+
+export function processKeyframes(keyframes: unknown): TransformKeyframe[] {
+  return keyframesDecoder.verify(keyframes);
 }
 
 abstract class Transform {
