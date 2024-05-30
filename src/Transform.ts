@@ -3,19 +3,29 @@
 // SPDX-License-Identifier: MIT
 
 import * as D from 'decoders';
+import { Animation } from './animation.js';
 import { Media } from './Media.js';
 
-const keyframeDecoder = D.exact({
-  offset: D.number.refine(n => n >= 0 && n <= 1, 'Must be between 0 and 1'),
+//XXX defaulting is no good - a subsequent keyframe that doesn't specify a value will reset that value to 0 (scale) etc.
+//XXX should deal with undefined when we compute the matrix, and default if unspecified
+const keyframePropertiesDecoder = D.exact({
   scale: D.optional(D.number, 1),
   rotate: D.optional(D.number, 0),
   translateX: D.optional(D.number, 0),
   translateY: D.optional(D.number, 0),
 });
+type TransformProperties = D.DecoderType<typeof keyframePropertiesDecoder>;
+type TransformKeyframe = Animation.Keyframe<TransformProperties>;
 
+//const keyframeDecoder = Animation.keyframeDecoder.pipe(keyframePropertiesDecoder);
+const keyframeDecoder = Animation.keyframeDecoder.refine(
+  (kf): kf is TransformKeyframe =>
+    keyframePropertiesDecoder.verify(kf.properties) !== undefined,
+  'Must be TransformKeyframe',
+);
 export const keyframesDecoder = D.array(keyframeDecoder);
 
-export type TransformKeyframe = D.DecoderType<typeof keyframeDecoder>;
+//export type TransformKeyframe = D.DecoderType<typeof keyframeDecoder>;
 
 export function processKeyframes(keyframes: unknown): TransformKeyframe[] {
   return keyframesDecoder.verify(keyframes);

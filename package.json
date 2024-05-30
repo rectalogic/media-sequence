@@ -69,6 +69,12 @@
         {
           "ignorePackages": true
         }
+      ],
+      "no-plusplus": [
+        "error",
+        {
+          "allowForLoopAfterthoughts": true
+        }
       ]
     }
   },
