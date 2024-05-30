@@ -124,7 +124,7 @@ export namespace Animation {
       [keyframe] = this.keyframes;
       while (
         keyframe &&
-        keyframe.offset <= time &&
+        keyframe.offset < time &&
         this.keyframes[1] &&
         this.keyframes[1].offset > time
       )
