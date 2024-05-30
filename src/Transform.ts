@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 import * as D from 'decoders';
-import { Animation } from './animation.js';
+import { Animation } from './Animation.js';
 import { Media } from './Media.js';
 
 //XXX defaulting is no good - a subsequent keyframe that doesn't specify a value will reset that value to 0 (scale) etc.
