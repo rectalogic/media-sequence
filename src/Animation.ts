@@ -4,15 +4,11 @@
 import * as D from 'decoders';
 
 export namespace Animation {
-  interface Properties {
-    [properties: string]: number;
-  }
-
-  type InterpolatedProperties<P> = {
+  export type Properties<P> = {
     [Property in keyof P]?: number;
   };
 
-  export interface Keyframe<P> {
+  export interface Keyframe<P extends Properties<P>> {
     offset: number;
     // XXX add easing - hmm, may want different easing for different properties in same keyframe?
     properties: P;
@@ -23,8 +19,8 @@ export namespace Animation {
     properties: D.record(D.number),
   });
 
-  export class Timeline<P extends Properties> {
-    private keyframes: Keyframe<InterpolatedProperties<P>>[] = [];
+  export class Timeline<P extends Properties<P>> {
+    private keyframes: Keyframe<Properties<P>>[] = [];
 
     constructor(keyframes: Keyframe<P>[]) {
       if (keyframes.length === 0) return;
@@ -39,8 +35,7 @@ export namespace Animation {
         properties: sortedKeyframes[0].properties,
       };
       for (let i = 1; i < sortedKeyframes.length; i++) {
-        const currentProperties: InterpolatedProperties<P> =
-          sortedKeyframes[i].properties;
+        const currentProperties: Properties<P> = sortedKeyframes[i].properties;
         // Find properties that were previously defined but not on this keyframe
         const missingProperties = new Map(
           [...property2keyframe].filter(
@@ -65,11 +60,6 @@ export namespace Animation {
                 keyframe,
                 nextKeyframe,
               );
-              // XXX
-              // currentProperties[key] =
-              //   keyframe.properties[key] +
-              //   (sortedKeyframes[i].offset - keyframe.offset) *
-              //     (nextKeyframe.properties[key] - keyframe.properties[key]);
               break;
             }
           }
@@ -96,8 +86,8 @@ export namespace Animation {
     private interpolate(
       time: number,
       key: keyof P,
-      currentKeyframe: Keyframe<InterpolatedProperties<P>>,
-      nextKeyframe: Keyframe<InterpolatedProperties<P>>,
+      currentKeyframe: Keyframe<Properties<P>>,
+      nextKeyframe: Keyframe<Properties<P>>,
     ) {
       const currentValue = currentKeyframe.properties[key];
       const nextValue = nextKeyframe.properties[key];
@@ -111,7 +101,7 @@ export namespace Animation {
     }
 
     public tick(time: number) {
-      const interpolatedProperties: InterpolatedProperties<P> = {};
+      const interpolatedProperties: Properties<P> = {};
       const currentKeyframe = this.keyframes[0];
       const nextKeyframe = this.keyframes[1];
       if (!currentKeyframe) return interpolatedProperties;
@@ -130,9 +120,14 @@ export namespace Animation {
         return interpolatedProperties;
       }
 
-      let keyframe: Keyframe<InterpolatedProperties<P>> | undefined =
-        this.keyframes[0];
-      while (keyframe && keyframe.offset > time)
+      let keyframe = this.keyframes.shift();
+      [keyframe] = this.keyframes;
+      while (
+        keyframe &&
+        keyframe.offset <= time &&
+        this.keyframes[1] &&
+        this.keyframes[1].offset > time
+      )
         keyframe = this.keyframes.shift();
       if (keyframe === undefined) return interpolatedProperties;
       return keyframe.properties;
