@@ -18,13 +18,13 @@ describe('Animation', () => {
 
     const results = [
       { t: 0, r: { x: 1 } },
-      { t: 0.25, r: { x: 1.125 } },
+      { t: 0.25, r: { x: 1.25 } },
       { t: 0.5, r: { y: 1, x: 1.5 } },
-      { t: 0.75, r: { y: 1.25, x: 1.625 } },
+      { t: 0.75, r: { y: 1.5, x: 1.75 } },
       { t: 1, r: { x: 2, y: 2 } },
     ];
     for (const { t, r } of results) {
-      expect(animation.tick(t)).to.eql(r);
+      expect(animation.tick(t), `tick ${t}`).to.eql(r);
     }
   });
   it('interpolates dropping existing properties', () => {
@@ -36,13 +36,13 @@ describe('Animation', () => {
 
     const results = [
       { t: 0, r: { x: 1, y: 1 } },
-      { t: 0.25, r: { x: 1, y: 1.25 } },
+      { t: 0.25, r: { x: 1, y: 1.5 } },
       { t: 0.5, r: { y: 2, x: 1 } },
       { t: 0.75, r: { y: 2.5, x: 1 } },
       { t: 1, r: { x: 1, y: 3 } },
     ];
     for (const { t, r } of results) {
-      expect(animation.tick(t)).to.eql(r);
+      expect(animation.tick(t), `tick ${t}`).to.eql(r);
     }
   });
 });

@@ -94,7 +94,9 @@ export namespace Animation {
       if (currentValue !== undefined && nextValue !== undefined) {
         return (
           currentValue +
-          (time - currentKeyframe.offset) * (nextValue - currentValue)
+          ((time - currentKeyframe.offset) /
+            (nextKeyframe.offset - currentKeyframe.offset)) *
+            (nextValue - currentValue)
         );
       }
       return undefined;
