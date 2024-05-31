@@ -6,13 +6,12 @@ import { Media } from './Media.js';
 import { MediaClip, processMediaClipArray } from './MediaClip.js';
 
 export class MediaSequence extends HTMLElement {
+  // XXX make playlist an api, user can fetch if they need to - see https://web.dev/articles/custom-elements-best-practices
   static get observedAttributes(): string[] {
     return ['playlist', 'width', 'height'];
   }
 
   private shadow: ShadowRoot;
-
-  private ctx2d: CanvasRenderingContext2D;
 
   private sheet: CSSStyleSheet;
 
@@ -36,37 +35,12 @@ export class MediaSequence extends HTMLElement {
   constructor() {
     super();
     this.shadow = this.attachShadow({ mode: 'open' });
-
-    const canvas = document.createElement('canvas');
-    canvas.className = 'canvas';
-    this.shadow.appendChild(canvas);
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Failed to get canvas 2d context');
-    this.ctx2d = ctx;
     this.sheet = new CSSStyleSheet();
     this.onSizeAttributesChanged();
-    const canvasSheet = new CSSStyleSheet();
-    canvasSheet.replaceSync(`
-      .canvas {
-        position: relative;
-        width: 100%;
-        height: 100%;
-      }
-    `);
-    this.shadow.adoptedStyleSheets.push(canvasSheet, this.sheet);
-
-    this.resizeObserver = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        if (entry.target === this) {
-          const size = entry.contentBoxSize[0];
-          if (this.activeMedia)
-            this.updateCanvasSize(
-              size.inlineSize,
-              size.blockSize,
-              this.activeMedia,
-            );
-        }
-      }
+    this.shadow.adoptedStyleSheets.push(this.sheet);
+    this.resizeObserver = new ResizeObserver(() => {
+      //if (this.activeMedia) this.updateCanvasSize(this.activeMedia);
+      // XXX resize both medias since they may have canvases
     });
     this.resizeObserver.observe(this, { box: 'content-box' });
   }
@@ -129,35 +103,13 @@ export class MediaSequence extends HTMLElement {
     }
   }
 
-  private draw(media?: Media) {
-    if (media) this.ctx2d.drawImage(media.element, 0, 0);
-  }
-
-  private updateCanvasSize(width: number, height: number, media: Media) {
-    //XXX intrinsic may be 0
-    // For high quality scaling, double the canvas size but render at half size
-    let containerWidth;
-    let containerHeight;
-    if (width > media.intrinsicWidth && height > media.intrinsicHeight) {
-      containerWidth = width;
-      containerHeight = height;
-    } else {
-      containerWidth = width * 2;
-      containerHeight = height * 2;
-    }
-    this.ctx2d.canvas.width = containerWidth;
-    this.ctx2d.canvas.height = containerHeight;
-    const matrix = media.computeObjectFitMatrix(
-      containerWidth,
-      containerHeight,
-    );
-    this.ctx2d.setTransform(matrix);
-  }
-
   private onSizeAttributesChanged() {
     const width = this.getAttribute('width');
     const height = this.getAttribute('height');
     this.sheet.replaceSync(`
+      :host([hidden]) {
+        display: none;
+      }
       :host {
         display: inline-block;
         width: ${width !== null ? `${width}px` : 'auto'};
@@ -182,6 +134,7 @@ export class MediaSequence extends HTMLElement {
   public stop() {
     if (this.activeMedia) {
       this.disposeMedia(this.activeMedia);
+      this.shadow.removeChild(this.activeMedia.renderableElement);
       this.activeMedia = undefined;
     }
     if (this.loadingMedia) {
@@ -208,8 +161,7 @@ export class MediaSequence extends HTMLElement {
 
   private onMediaLoad = (media: Media) => {
     if (media === this.activeMedia) {
-      this.updateCanvasSize(this.offsetWidth, this.offsetHeight, media);
-      this.draw(media);
+      this.shadow.appendChild(media.renderableElement);
     }
   };
 
@@ -229,7 +181,6 @@ export class MediaSequence extends HTMLElement {
         this.nextVideo();
       }
       if (this.activeMedia && this.activeMedia.playing) {
-        this.draw(this.activeMedia);
         requestAnimationFrame(this.onAnimationFrame);
       }
     }
@@ -239,12 +190,7 @@ export class MediaSequence extends HTMLElement {
     if (!this.mediaClips) return;
     this.activeMedia = this.createMedia(this.mediaClips[0]);
     if (this.activeMedia.loaded) {
-      this.updateCanvasSize(
-        this.offsetWidth,
-        this.offsetHeight,
-        this.activeMedia,
-      );
-      this.draw(this.activeMedia);
+      this.shadow.replaceChildren(this.activeMedia.renderableElement);
     }
 
     if (this.mediaClips.length > 1) {
@@ -259,12 +205,7 @@ export class MediaSequence extends HTMLElement {
       const currentMedia = this.activeMedia;
       this.activeMedia = this.loadingMedia;
       if (this.activeMedia.loaded) {
-        this.updateCanvasSize(
-          this.offsetWidth,
-          this.offsetHeight,
-          this.activeMedia,
-        );
-        this.draw(this.activeMedia);
+        this.shadow.replaceChildren(this.activeMedia.renderableElement);
       }
       this.disposeMedia(currentMedia);
       this.mediaClips.shift();

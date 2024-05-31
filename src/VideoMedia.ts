@@ -4,23 +4,22 @@
 import { Media, MediaLoadCallback, MediaErrorCallback } from './Media.js';
 import { MediaClip } from './MediaClip.js';
 
-export class VideoMedia extends Media {
-  private _element: HTMLVideoElement;
-
+export class VideoMedia extends Media<HTMLVideoElement> {
   constructor(
     mediaClip: MediaClip,
     onLoad: MediaLoadCallback,
     onError: MediaErrorCallback,
   ) {
-    super(mediaClip);
-    const video = document.createElement('video');
-    video.addEventListener('error', () => onError('Video error', video.error));
-    video.addEventListener('canplay', () => {
+    super(mediaClip, document.createElement('video'));
+    this.element.addEventListener('error', () =>
+      onError('Video error', this.element.error),
+    );
+    this.element.addEventListener('canplay', () => {
       this.loaded = true;
       onLoad(this);
     });
-    video.preload = 'auto';
-    video.crossOrigin = 'anonymous';
+    this.element.preload = 'auto';
+    this.element.crossOrigin = 'anonymous';
     // Use media fragments https://www.w3.org/TR/media-frags/
     if (
       this.mediaClip.startTime !== 0 ||
@@ -30,16 +29,14 @@ export class VideoMedia extends Media {
       if (this.mediaClip.endTime !== undefined) {
         t.push(this.mediaClip.endTime);
       }
-      video.src = new URL(`#t=${t.join()}`, this.mediaClip.src).toString();
+      this.element.src = new URL(
+        `#t=${t.join()}`,
+        this.mediaClip.src,
+      ).toString();
     } else {
-      video.src = this.mediaClip.src;
+      this.element.src = this.mediaClip.src;
     }
-    video.load();
-    this._element = video;
-  }
-
-  public get element() {
-    return this._element;
+    this.element.load();
   }
 
   // XXX endTime could be > duration
@@ -47,15 +44,15 @@ export class VideoMedia extends Media {
   // XXX intrinsice size can change during playback, fires resize event. May need to listen for this to recompute aspect ratio
 
   public get intrinsicWidth() {
-    return this._element.videoWidth;
+    return this.element.videoWidth;
   }
 
   public get intrinsicHeight() {
-    return this._element.videoHeight;
+    return this.element.videoHeight;
   }
 
   public get currentTime() {
-    return this._element.currentTime;
+    return this.element.currentTime;
   }
 
   public get duration() {
@@ -67,23 +64,23 @@ export class VideoMedia extends Media {
   }
 
   public get ended() {
-    return this._element.ended;
+    return this.element.ended;
   }
 
   public get playing(): boolean {
-    return !this._element.paused && !this._element.ended;
+    return !this.element.paused && !this.element.ended;
   }
 
   public play() {
-    this._element.play();
+    this.element.play();
   }
 
   public pause() {
-    this._element.pause();
+    this.element.pause();
   }
 
   public dispose() {
     this.pause();
-    this._element.removeAttribute('src');
+    this.element.removeAttribute('src');
   }
 }

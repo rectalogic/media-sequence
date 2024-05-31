@@ -3,7 +3,7 @@
 
 import * as D from 'decoders';
 
-import { keyframesDecoder } from './Transform.js';
+import { transformDecoder } from './Transform.js';
 
 const mediaClipDecoder = D.object({
   type: D.oneOf(['video', 'image']),
@@ -14,7 +14,7 @@ const mediaClipDecoder = D.object({
     D.oneOf(['fill', 'contain', 'cover', 'none', 'scale-down']),
     'contain',
   ),
-  keyframes: D.optional(keyframesDecoder),
+  transform: D.optional(transformDecoder),
 });
 const mediaClipsDecoder = D.array(mediaClipDecoder);
 

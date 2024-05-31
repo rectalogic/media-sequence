@@ -5,20 +5,40 @@ import { MediaClip } from './MediaClip.js';
 
 // XXX will need to handle the case where we are transitioning video and video/image and one of them stalls/buffers - need to pause the other so they stay in sync?
 
-export abstract class Media {
+export abstract class Media<E extends HTMLElement = HTMLElement> {
+  private _element: E;
+
+  private _container: HTMLElement;
+
   private _mediaClip: MediaClip;
 
   private _loaded: boolean = false;
 
-  constructor(mediaClip: MediaClip) {
+  constructor(mediaClip: MediaClip, element: E) {
+    this._element = element;
+    this._element.style.width = '100%';
+    this._element.style.height = '100%';
+    this._element.style.objectFit = mediaClip.objectFit;
     this._mediaClip = mediaClip;
+    this._container = document.createElement('div');
+    this._container.style.width = '100%';
+    this._container.style.height = '100%';
+    this._container.style.overflow = 'hidden';
+    this._container.appendChild(element);
   }
 
   public get mediaClip() {
     return this._mediaClip;
   }
 
-  public abstract get element(): HTMLVideoElement | HTMLImageElement;
+  public get renderableElement() {
+    // XXX return div container or canvas depending on how we need to render
+    return this._container;
+  }
+
+  protected get element() {
+    return this._element;
+  }
 
   public get loaded(): boolean {
     return this._loaded;
@@ -26,6 +46,14 @@ export abstract class Media {
 
   protected set loaded(value: boolean) {
     this._loaded = value;
+  }
+
+  public get width() {
+    return this._element.offsetWidth;
+  }
+
+  public get height() {
+    return this._element.offsetHeight;
   }
 
   public abstract get intrinsicWidth(): number;

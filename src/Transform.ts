@@ -8,86 +8,40 @@ import { Media } from './Media.js';
 
 //XXX defaulting is no good - a subsequent keyframe that doesn't specify a value will reset that value to 0 (scale) etc.
 //XXX should deal with undefined when we compute the matrix, and default if unspecified
-const keyframePropertiesDecoder = D.exact({
+const transformPropertiesDecoder = D.exact({
   scale: D.optional(D.number, 1),
   rotate: D.optional(D.number, 0),
   translateX: D.optional(D.number, 0),
   translateY: D.optional(D.number, 0),
 });
-type TransformProperties = D.DecoderType<typeof keyframePropertiesDecoder>;
+type TransformProperties = D.DecoderType<typeof transformPropertiesDecoder>;
 type TransformKeyframe = Animation.Keyframe<TransformProperties>;
 
-//const keyframeDecoder = Animation.keyframeDecoder.pipe(keyframePropertiesDecoder);
+//const keyframeDecoder = Animation.keyframeDecoder.pipe(transformPropertiesDecoder);
 const keyframeDecoder = Animation.keyframeDecoder.refine(
   (kf): kf is TransformKeyframe =>
-    keyframePropertiesDecoder.verify(kf.properties) !== undefined,
+    transformPropertiesDecoder.verify(kf.properties) !== undefined,
   'Must be TransformKeyframe',
 );
-export const keyframesDecoder = D.array(keyframeDecoder);
+export const transformDecoder = D.array(keyframeDecoder);
 
 //export type TransformKeyframe = D.DecoderType<typeof keyframeDecoder>;
 
-export function processKeyframes(keyframes: unknown): TransformKeyframe[] {
-  return keyframesDecoder.verify(keyframes);
-}
-
-abstract class Transform {
-  /*
+export class Transform {
   protected media: Media;
 
-  protected keyframes: TransformKeyframe[];
+  protected animation: Animation.Timeline<TransformProperties>;
 
-  constructor(media: Media, keyframes: TransformKeyframe[]) {
-    this.media = media;
-    this.keyframes = keyframes;
-  }
-
-  public abstract apply(): void;
-
-  public abstract update(): void;
-}
-
-export class WebAnimationTransform extends Transform {
-  private animation?: Animation;
-
-  public apply() {
-    const effect = new KeyframeEffect(
-      this.media.element,
-      this.keyframes.map(kf => this.toWebAnimationKeyframe(kf)),
-      this.media.duration * 1000,
-    );
-    this.animation = new Animation(effect, document.timeline);
-    this.animation.play();
-    this.animation.pause();
-  }
-
-  public update() {
-    if (this.animation) {
-      this.animation.currentTime =
-        (this.media.currentTime - this.media.mediaClip.startTime) * 1000;
-    }
-  }
-
-  private toWebAnimationKeyframe(keyframe: TransformKeyframe): Keyframe {
-    const transforms = [];
-    if (keyframe.translateX !== 0 || keyframe.translateY !== 0)
-      transforms.push(
-        `translate(${keyframe.translateX * this.media.width}px, ${
-          keyframe.translateY * this.media.height
-        }px)`,
-      );
-    if (keyframe.scale !== 1) transforms.push(`scale(${keyframe.scale})`);
-    if (keyframe.rotate !== 0) transforms.push(`rotate(${keyframe.rotate}deg)`);
-    return {
-      offset: keyframe.offset,
-      transform: transforms.length > 0 ? transforms.join(' ') : 'none',
-    };
-  }
-}
-
-export class CanvasImageTransform extends Transform {
   private objectFitMatrix?: DOMMatrix;
 
+  constructor(
+    media: Media,
+    keyframes: Animation.Keyframe<TransformProperties>[],
+  ) {
+    this.media = media;
+    this.animation = new Animation.Timeline<TransformProperties>(keyframes);
+  }
+  /*
   public apply() {}
 
   public update() {}
@@ -116,6 +70,5 @@ export class CanvasImageTransform extends Transform {
     matrix.translateSelf(-this.media.width / 2, -this.media.height / 2);
     return matrix;
   }
-
-  */
+*/
 }

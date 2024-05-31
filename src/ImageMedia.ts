@@ -4,10 +4,8 @@
 import { Media, MediaLoadCallback, MediaErrorCallback } from './Media.js';
 import { MediaClip } from './MediaClip.js';
 
-export class ImageMedia extends Media {
+export class ImageMedia extends Media<HTMLImageElement> {
   private static DEFAULT_DURATION = 5;
-
-  private _element: HTMLImageElement;
 
   private _playing: boolean = false;
 
@@ -22,30 +20,26 @@ export class ImageMedia extends Media {
     onLoad: MediaLoadCallback,
     onError: MediaErrorCallback,
   ) {
-    super(mediaClip);
-    const image = document.createElement('img');
-    image.addEventListener('error', event => onError('Image error', event));
-    image.addEventListener('load', () => {
+    super(mediaClip, document.createElement('img'));
+    this.element.addEventListener('error', event =>
+      onError('Image error', event),
+    );
+    this.element.addEventListener('load', () => {
       this.loaded = true;
       onLoad(this);
     });
-    image.loading = 'eager';
-    image.crossOrigin = 'anonymous';
-    image.src = this.mediaClip.src;
-    this._element = image;
+    this.element.loading = 'eager';
+    this.element.crossOrigin = 'anonymous';
+    this.element.src = this.mediaClip.src;
     this._currentTime = mediaClip.startTime;
   }
 
-  public get element() {
-    return this._element;
-  }
-
   public get intrinsicWidth() {
-    return this._element.naturalWidth;
+    return this.element.naturalWidth;
   }
 
   public get intrinsicHeight() {
-    return this._element.naturalHeight;
+    return this.element.naturalHeight;
   }
 
   public override set animationTime(timestamp: number) {
@@ -95,6 +89,6 @@ export class ImageMedia extends Media {
 
   public dispose() {
     this.pause();
-    this._element.removeAttribute('src');
+    this.element.removeAttribute('src');
   }
 }
