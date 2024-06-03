@@ -3,8 +3,6 @@
 
 import * as D from 'decoders';
 
-import { transformDecoder } from './Transform.js';
-
 const mediaClipDecoder = D.exact({
   type: D.oneOf(['video', 'image']),
   src: D.string,
@@ -14,35 +12,21 @@ const mediaClipDecoder = D.exact({
     D.oneOf(['fill', 'contain', 'cover', 'none', 'scale-down']),
     'contain',
   ),
-  transforms: D.optional(
-    D.array(
-      D.exact({
-        easing: D.optional(D.string),
-        offset: D.optional(D.number),
-        scale: D.optional(D.number),
-        rotate: D.optional(D.number),
-        translateX: D.optional(D.number),
-        translateY: D.optional(D.number),
-      }),
-    ),
-  ),
-  //XXX need a name for each animation - these are applied to the div containing the video/image
-  animations: D.optional(
-    D.array(
-      D.exact({
-        name: D.string,
-        keyframes: D.array(
-          D.object({
-            composite: D.optional(
-              D.oneOf(['accumulate', 'add', 'auto', 'replace']),
-            ),
-            easing: D.optional(D.string),
-            offset: D.optional(D.number),
-            properties: D.record(D.either(D.number, D.string)),
-          }),
-        ),
-      }),
-    ),
+  transform: D.optional(
+    D.exact({
+      startOffset: D.optional(D.number),
+      endOffset: D.optional(D.number),
+      keyframes: D.array(
+        D.exact({
+          easing: D.optional(D.string),
+          offset: D.optional(D.number),
+          scale: D.optional(D.number),
+          rotate: D.optional(D.number),
+          translateX: D.optional(D.number),
+          translateY: D.optional(D.number),
+        }),
+      ),
+    }),
   ),
 });
 

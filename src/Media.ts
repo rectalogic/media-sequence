@@ -30,24 +30,31 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
   }
 
   protected onLoad() {
-    if (this.mediaClip.transforms) {
-      const keyframes = this.mediaClip.transforms.map(xfm => ({
-        offset: xfm.offset,
-        easing: xfm.easing,
-        // XXX check if percentage works
+    if (this.mediaClip.transform) {
+      const keyframes = this.mediaClip.transform.keyframes.map(kf => ({
+        offset: kf.offset,
+        easing: kf.easing,
         transform: `translate(${
-          xfm.translateX !== undefined ? xfm.translateX * 100 : 0
-        }%, ${
-          xfm.translateY !== undefined ? xfm.translateY * 100 : 0
-        }%) scale(${xfm.scale !== undefined ? xfm.scale : 1}) rotate(${
-          xfm.rotate !== undefined ? xfm.rotate : 0
-        }deg)`,
+          kf.translateX !== undefined ? kf.translateX * 100 : 0
+        }%, ${kf.translateY !== undefined ? kf.translateY * 100 : 0}%) scale(${
+          kf.scale !== undefined ? kf.scale : 1
+        }) rotate(${kf.rotate !== undefined ? kf.rotate : 0}deg)`,
       }));
-      this._transformAnimation = this.element.animate(
-        keyframes,
-        this.duration * 1000,
-      );
-      this._transformAnimation.pause();
+
+      const startOffset =
+        this.mediaClip.transform.startOffset !== undefined
+          ? this.mediaClip.transform.startOffset
+          : 0;
+      const endOffset =
+        this.mediaClip.transform.endOffset !== undefined
+          ? this.mediaClip.transform.endOffset
+          : 0;
+      const effect = new KeyframeEffect(this.element, keyframes, {
+        delay: (this.mediaClip.startTime + startOffset) * 1000,
+        duration: (this.duration - (startOffset + endOffset)) * 1000,
+      });
+      this._transformAnimation = new Animation(effect, null);
+      this._transformAnimation.play();
     }
   }
 
