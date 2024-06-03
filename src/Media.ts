@@ -53,8 +53,8 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
         delay: (this.mediaClip.startTime + startOffset) * 1000,
         duration: (this.duration - (startOffset + endOffset)) * 1000,
       });
-      this._transformAnimation = new Animation(effect, null);
-      this._transformAnimation.play();
+      this._transformAnimation = new Animation(effect);
+      this._transformAnimation.pause();
     }
   }
 
