@@ -8,6 +8,8 @@ import { MediaClip } from './MediaClip.js';
 export abstract class Media<E extends HTMLElement = HTMLElement> {
   private _element: E;
 
+  private _transformAnimation?: Animation;
+
   private _container: HTMLElement;
 
   private _mediaClip: MediaClip;
@@ -25,6 +27,28 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
     this._container.style.height = '100%';
     this._container.style.overflow = 'hidden';
     this._container.appendChild(element);
+  }
+
+  protected onLoad() {
+    if (this.mediaClip.transforms) {
+      const keyframes = this.mediaClip.transforms.map(xfm => ({
+        offset: xfm.offset,
+        easing: xfm.easing,
+        // XXX check if percentage works
+        transform: `translate(${
+          xfm.translateX !== undefined ? xfm.translateX * 100 : 0
+        }%, ${
+          xfm.translateY !== undefined ? xfm.translateY * 100 : 0
+        }%) scale(${xfm.scale !== undefined ? xfm.scale : 1}) rotate(${
+          xfm.rotate !== undefined ? xfm.rotate : 0
+        }deg)`,
+      }));
+      this._transformAnimation = this.element.animate(
+        keyframes,
+        this.duration * 1000,
+      );
+      this._transformAnimation.pause();
+    }
   }
 
   public get mediaClip() {
@@ -64,9 +88,9 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
 
   public abstract get duration(): number;
 
-  // eslint-disable-next-line class-methods-use-this, no-empty-function
   public set animationTime(timestamp: number) {
-    // XXX update transform if any
+    if (this._transformAnimation)
+      this._transformAnimation.currentTime = this.currentTime * 1000;
   }
 
   public abstract get ended(): boolean;

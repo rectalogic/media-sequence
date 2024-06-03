@@ -17,6 +17,7 @@ export class VideoMedia extends Media<HTMLVideoElement> {
     this.element.addEventListener('canplay', () => {
       this.loaded = true;
       onLoad(this);
+      this.onLoad();
     });
     this.element.preload = 'auto';
     this.element.crossOrigin = 'anonymous';

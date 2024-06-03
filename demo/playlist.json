@@ -14,15 +14,15 @@
   {
     "type": "image",
     "src": "https://gl-transitions.com/static/media/hBd6EPoQT2C8VQYv65ys_White_Sands.51f2958f.jpg",
-    "keyframes": [
+    "transforms": [
       {
-        "scale": 1.0,
-        "offset": 0
+        "offset": 0,
+        "scale": 1.0
       },
       {
+        "offset": 1,
         "scale": 2.0,
-        "translateX": 1.5,
-        "offset": 1
+        "translateX": 1.5
       }
     ]
   },

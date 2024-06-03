@@ -27,6 +27,7 @@ export class ImageMedia extends Media<HTMLImageElement> {
     this.element.addEventListener('load', () => {
       this.loaded = true;
       onLoad(this);
+      this.onLoad();
     });
     this.element.loading = 'eager';
     this.element.crossOrigin = 'anonymous';

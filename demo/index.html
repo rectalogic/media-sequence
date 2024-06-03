@@ -11,7 +11,9 @@
     <script>
       window.onload = () => {
         const ms = document.querySelector('#sequence');
-        ms.addEventListener('error', event => console.log(event.message));
+        ms.addEventListener('error', event =>
+          console.log(`${event.message} ${event.error}`),
+        );
       };
     </script>
   </head>
