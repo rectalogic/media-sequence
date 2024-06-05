@@ -14,7 +14,7 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
 
   private _mediaClip: MediaClip;
 
-  private _loaded: boolean = false;
+  private _disposed: boolean = false;
 
   constructor(mediaClip: MediaClip, element: E) {
     this._element = element;
@@ -29,7 +29,10 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
     this._container.appendChild(element);
   }
 
+  public abstract load(): Promise<unknown>;
+
   protected onLoad() {
+    if (this.disposed) return;
     if (this.mediaClip.transform) {
       const keyframes = this.mediaClip.transform.keyframes.map(kf => ({
         offset: kf.offset,
@@ -71,14 +74,6 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
     return this._element;
   }
 
-  public get loaded(): boolean {
-    return this._loaded;
-  }
-
-  protected set loaded(value: boolean) {
-    this._loaded = value;
-  }
-
   public get width() {
     return this._element.offsetWidth;
   }
@@ -108,7 +103,13 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
 
   public abstract pause(): void;
 
-  public abstract dispose(): void;
+  public dispose(): void {
+    this._disposed = true;
+  }
+
+  protected get disposed() {
+    return this._disposed;
+  }
 
   public computeObjectFitMatrix(
     containerWidth: number,
@@ -164,6 +165,3 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
     return matrix;
   }
 }
-
-export type MediaLoadCallback = (media: Media) => void;
-export type MediaErrorCallback = (message: string, cause: any) => void;

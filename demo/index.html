@@ -9,11 +9,22 @@
     </style>
     <script src="../dist/src/media-sequence.js" type="module"></script>
     <script>
-      window.onload = () => {
+      window.onload = async () => {
         const ms = document.querySelector('#sequence');
         ms.addEventListener('error', event =>
-          console.log(`${event.message} ${event.error}`),
+          console.error(`${event.message} ${event.error}`),
         );
+        const response = await fetch('playlist.json');
+        if (response.ok) {
+          try {
+            const json = await response.json();
+            await ms.setPlaylist(json);
+          } catch (error) {
+            console.error(error);
+          }
+        } else {
+          console.error(response);
+        }
       };
     </script>
   </head>
@@ -22,7 +33,6 @@
       id="sequence"
       width="640"
       height="360"
-      playlist="playlist.json"
       style="background-color: #f00"
     >
     </media-sequence>

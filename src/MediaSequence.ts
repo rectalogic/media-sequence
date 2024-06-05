@@ -5,10 +5,15 @@ import createMedia from './MediaFactory.js';
 import { Media } from './Media.js';
 import { MediaClip, processMediaClipArray } from './MediaClip.js';
 
+const delay = async (ms: number) =>
+  new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+
 export class MediaSequence extends HTMLElement {
   // XXX make playlist an api, user can fetch if they need to - see https://web.dev/articles/custom-elements-best-practices
   static get observedAttributes(): string[] {
-    return ['playlist', 'width', 'height'];
+    return ['width', 'height'];
   }
 
   private shadow: ShadowRoot;
@@ -19,7 +24,11 @@ export class MediaSequence extends HTMLElement {
 
   private loadingMedia?: Media;
 
-  private playlist?: ReadonlyArray<MediaClip>;
+  private loadingMediaPromise?: Promise<unknown>;
+
+  private playbackLoopRunning: boolean = false;
+
+  private _playlist?: ReadonlyArray<MediaClip>;
 
   private mediaClips?: MediaClip[];
 
@@ -52,7 +61,7 @@ export class MediaSequence extends HTMLElement {
   public attributeChangedCallback(
     attr: string,
     _oldValue: string,
-    newValue: string,
+    _newValue: string,
   ) {
     console.log(`Custom media-sequence attributeChangedCallback ${attr}`);
     switch (attr) {
@@ -60,47 +69,26 @@ export class MediaSequence extends HTMLElement {
       case 'height':
         this.onSizeAttributesChanged();
         break;
-      case 'playlist':
-        this.updatePlaylist(newValue);
-        break;
       default:
     }
   }
 
-  private async updatePlaylist(url: string) {
-    this.playlist = undefined;
+  public async setPlaylist(data: unknown) {
+    this.stop();
+    this._playlist = undefined;
     this.mediaClips = undefined;
     this.activeMedia = undefined;
-    this.stop();
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        this.dispatchEvent(
-          new ErrorEvent('error', {
-            message: `Failed to fetch playlist ${url}`,
-            error: response,
-          }),
-        );
-      }
 
-      const json = await response.json();
+    if (data !== undefined) {
+      this._playlist = processMediaClipArray(data);
+      this.mediaClips = [...this._playlist];
 
-      this.playlist = processMediaClipArray(json);
-      this.mediaClips = [...this.playlist];
-
-      this.initialize();
-    } catch (error) {
-      this.playlist = undefined;
-      this.mediaClips = undefined;
-      this.activeMedia = undefined;
-
-      this.dispatchEvent(
-        new ErrorEvent('error', {
-          message: 'Failed to parse playlist contents',
-          error: error as any,
-        }),
-      );
+      await this.initialize();
     }
+  }
+
+  public get playlist(): ReadonlyArray<MediaClip> | undefined {
+    return this._playlist;
   }
 
   private onSizeAttributesChanged() {
@@ -119,105 +107,107 @@ export class MediaSequence extends HTMLElement {
   }
 
   public play() {
-    if (this.activeMedia && !this.activeMedia.playing) {
+    if (this.activeMedia !== undefined && !this.activeMedia.playing) {
+      this.playbackLoopRunning = true;
       this.activeMedia.play();
-      requestAnimationFrame(this.onAnimationFrame);
+      this.playbackLoop();
     }
   }
 
   public pause() {
-    if (this.activeMedia && this.activeMedia.playing) {
+    if (this.activeMedia !== undefined && this.activeMedia.playing) {
+      this.playbackLoopRunning = false;
       this.activeMedia.pause();
     }
   }
 
-  public stop() {
+  public async stop() {
+    this.playbackLoopRunning = false;
     if (this.activeMedia) {
-      this.disposeMedia(this.activeMedia);
+      this.activeMedia.dispose();
       this.shadow.removeChild(this.activeMedia.renderableElement);
       this.activeMedia = undefined;
     }
     if (this.loadingMedia) {
-      this.disposeMedia(this.loadingMedia);
+      this.loadingMedia.dispose();
       this.loadingMedia = undefined;
+      this.loadingMediaPromise = undefined;
     }
     if (this.playlist) {
       this.mediaClips = [...this.playlist];
-      this.initialize();
+      await this.initialize();
     } else {
       this.mediaClips = undefined;
     }
   }
 
-  private createMedia(mediaClip: MediaClip): Media {
-    const media = createMedia(mediaClip, this.onMediaLoad, this.onMediaError);
-    return media;
+  private dispatchError(message: string, error: unknown) {
+    if (error instanceof Error)
+      this.dispatchEvent(new ErrorEvent(error.message, { error: error.cause }));
+    else this.dispatchEvent(new ErrorEvent(message, { error }));
   }
 
-  private disposeMedia(media: Media): undefined {
-    media.dispose();
-    return undefined;
-  }
-
-  private onMediaLoad = (media: Media) => {
-    if (media === this.activeMedia) {
-      this.shadow.appendChild(media.renderableElement);
-    }
-  };
-
-  private onMediaError = (message: string, cause: any) => {
-    this.stop();
-    this.dispatchEvent(new ErrorEvent(message, { error: cause }));
-  };
-
-  private onAnimationFrame = (timestamp: number) => {
-    if (this.activeMedia && this.mediaClips) {
-      this.activeMedia.animationTime = timestamp;
-      if (
-        this.activeMedia.ended ||
-        (this.mediaClips[0].endTime &&
-          this.activeMedia.currentTime >= this.mediaClips[0].endTime)
-      ) {
-        this.nextVideo();
+  //XXX we only need rAF for rendering video to canvas, can just use setTimeout for other timing stuff - animation kind of jumpy though
+  private async playbackLoop() {
+    const rate = 50;
+    while (this.playbackLoopRunning && this.activeMedia !== undefined) {
+      const frameBeginTime = performance.now();
+      this.activeMedia.animationTime = frameBeginTime;
+      if (this.activeMedia.ended) {
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          await this.nextMedia();
+        } catch (error) {
+          this.dispatchError('Media load error', error);
+          return; //XXX cleanup state? stop()?
+        }
       }
-      if (this.activeMedia && this.activeMedia.playing) {
-        requestAnimationFrame(this.onAnimationFrame);
-      }
+      const frameDelayTime = rate - (performance.now() - frameBeginTime);
+      if (frameDelayTime > 0)
+        // eslint-disable-next-line no-await-in-loop
+        await delay(frameDelayTime);
     }
-  };
-
-  private initialize() {
-    if (!this.mediaClips) return;
-    this.activeMedia = this.createMedia(this.mediaClips[0]);
-    if (this.activeMedia.loaded) {
-      this.shadow.replaceChildren(this.activeMedia.renderableElement);
-    }
-
-    if (this.mediaClips.length > 1) {
-      this.loadingMedia = this.createMedia(this.mediaClips[1]);
-    }
+    //XXX cleanup state/stop()? if this.activeMedia undefined
   }
 
-  private nextVideo() {
+  private async nextMedia() {
     if (!this.mediaClips || !this.activeMedia) return;
 
     if (this.loadingMedia) {
       const currentMedia = this.activeMedia;
+      await this.loadingMediaPromise;
       this.activeMedia = this.loadingMedia;
-      if (this.activeMedia.loaded) {
-        this.shadow.replaceChildren(this.activeMedia.renderableElement);
-      }
-      this.disposeMedia(currentMedia);
+      this.shadow.replaceChildren(this.activeMedia.renderableElement);
+
+      currentMedia.dispose();
       this.mediaClips.shift();
       this.activeMedia.play();
 
       if (this.mediaClips.length > 1) {
-        this.loadingMedia = this.createMedia(this.mediaClips[1]);
+        this.loadingMedia = createMedia(this.mediaClips[1]);
+        this.loadingMediaPromise = this.loadingMedia.load();
       } else {
         this.loadingMedia = undefined;
+        this.loadingMediaPromise = undefined;
       }
     } else {
       this.stop();
+    }
+  }
+
+  private async initialize() {
+    if (!this.mediaClips) return;
+    try {
+      this.activeMedia = createMedia(this.mediaClips[0]);
+      await this.activeMedia.load();
+      this.shadow.replaceChildren(this.activeMedia.renderableElement);
+
+      if (this.mediaClips.length > 1) {
+        this.loadingMedia = createMedia(this.mediaClips[1]);
+        this.loadingMediaPromise = this.loadingMedia.load();
+      }
+    } catch (error) {
+      this.dispatchError('Media load error', error);
     }
   }
 }

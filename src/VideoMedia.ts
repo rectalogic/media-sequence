@@ -1,43 +1,42 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
-import { Media, MediaLoadCallback, MediaErrorCallback } from './Media.js';
+import { Media } from './Media.js';
 import { MediaClip } from './MediaClip.js';
 
 export class VideoMedia extends Media<HTMLVideoElement> {
-  constructor(
-    mediaClip: MediaClip,
-    onLoad: MediaLoadCallback,
-    onError: MediaErrorCallback,
-  ) {
+  constructor(mediaClip: MediaClip) {
     super(mediaClip, document.createElement('video'));
-    this.element.addEventListener('error', () =>
-      onError('Video error', this.element.error),
-    );
-    this.element.addEventListener('canplay', () => {
-      this.loaded = true;
-      onLoad(this);
-      this.onLoad();
-    });
     this.element.preload = 'auto';
     this.element.crossOrigin = 'anonymous';
-    // Use media fragments https://www.w3.org/TR/media-frags/
-    if (
-      this.mediaClip.startTime !== 0 ||
-      this.mediaClip.endTime !== undefined
-    ) {
-      const t = [this.mediaClip.startTime];
-      if (this.mediaClip.endTime !== undefined) {
-        t.push(this.mediaClip.endTime);
+  }
+
+  public load() {
+    return new Promise((resolve, reject) => {
+      this.element.onerror = () =>
+        reject(new Error('Video error', { cause: this.element.error }));
+      this.element.oncanplay = () => {
+        this.onLoad();
+        resolve(this);
+      };
+      // Use media fragments https://www.w3.org/TR/media-frags/
+      if (
+        this.mediaClip.startTime !== 0 ||
+        this.mediaClip.endTime !== undefined
+      ) {
+        const t = [this.mediaClip.startTime];
+        if (this.mediaClip.endTime !== undefined) {
+          t.push(this.mediaClip.endTime);
+        }
+        this.element.src = new URL(
+          `#t=${t.join()}`,
+          this.mediaClip.src,
+        ).toString();
+      } else {
+        this.element.src = this.mediaClip.src;
       }
-      this.element.src = new URL(
-        `#t=${t.join()}`,
-        this.mediaClip.src,
-      ).toString();
-    } else {
-      this.element.src = this.mediaClip.src;
-    }
-    this.element.load();
+      this.element.load();
+    });
   }
 
   // XXX endTime could be > duration
@@ -65,11 +64,15 @@ export class VideoMedia extends Media<HTMLVideoElement> {
   }
 
   public get ended() {
-    return this.element.ended;
+    return (
+      this.element.ended ||
+      (this.mediaClip.endTime !== undefined &&
+        this.currentTime >= this.mediaClip.endTime)
+    );
   }
 
   public get playing(): boolean {
-    return !this.element.paused && !this.element.ended;
+    return !this.element.paused && !this.ended;
   }
 
   public play() {
@@ -80,7 +83,8 @@ export class VideoMedia extends Media<HTMLVideoElement> {
     this.element.pause();
   }
 
-  public dispose() {
+  public override dispose() {
+    super.dispose();
     this.pause();
     this.element.removeAttribute('src');
   }

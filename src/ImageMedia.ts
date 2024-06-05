@@ -1,7 +1,7 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
-import { Media, MediaLoadCallback, MediaErrorCallback } from './Media.js';
+import { Media } from './Media.js';
 import { MediaClip } from './MediaClip.js';
 
 export class ImageMedia extends Media<HTMLImageElement> {
@@ -15,24 +15,23 @@ export class ImageMedia extends Media<HTMLImageElement> {
 
   private _currentTime: number;
 
-  constructor(
-    mediaClip: MediaClip,
-    onLoad: MediaLoadCallback,
-    onError: MediaErrorCallback,
-  ) {
+  constructor(mediaClip: MediaClip) {
     super(mediaClip, document.createElement('img'));
-    this.element.addEventListener('error', event =>
-      onError('Image error', event),
-    );
-    this.element.addEventListener('load', () => {
-      this.loaded = true;
-      onLoad(this);
-      this.onLoad();
-    });
     this.element.loading = 'eager';
     this.element.crossOrigin = 'anonymous';
-    this.element.src = this.mediaClip.src;
     this._currentTime = mediaClip.startTime;
+  }
+
+  public load() {
+    return new Promise((resolve, reject) => {
+      this.element.onerror = event =>
+        reject(new Error('Image error', { cause: event }));
+      this.element.onload = () => {
+        this.onLoad();
+        resolve(this);
+      };
+      this.element.src = this.mediaClip.src;
+    });
   }
 
   public get intrinsicWidth() {
@@ -88,7 +87,8 @@ export class ImageMedia extends Media<HTMLImageElement> {
     this.lastTimestamp = undefined;
   }
 
-  public dispose() {
+  public override dispose() {
+    super.dispose();
     this.pause();
     this.element.removeAttribute('src');
   }
