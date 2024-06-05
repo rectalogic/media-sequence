@@ -34,6 +34,8 @@ describe('ImageMedia', () => {
       { time: 1000, transform: 'matrix(1, 0, 0, 1, 0, 0)' },
       { time: 1500, transform: 'matrix(1, 0, 0, 1, 0, 12.5)' },
       { time: 2500, transform: 'matrix(1, 0, 0, 1, 0, 37.5)' },
+      { time: 4500, transform: 'matrix(1, 0, 0, 1, 0, 87.5)' },
+      { time: 5000, transform: 'matrix(1, 0, 0, 1, 0, 100)' },
     ];
     for (const { time, transform } of results) {
       media.animationTime = time;

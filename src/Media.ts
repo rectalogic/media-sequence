@@ -55,6 +55,7 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
       const effect = new KeyframeEffect(this.element, keyframes, {
         delay: (this.mediaClip.startTime + startOffset) * 1000,
         duration: (this.duration - (startOffset + endOffset)) * 1000,
+        fill: 'forwards',
       });
       this._transformAnimation = new Animation(effect);
       this._transformAnimation.pause();

@@ -74,15 +74,13 @@ export class MediaSequence extends HTMLElement {
   }
 
   public async setPlaylist(data: unknown) {
-    this.stop();
+    await this.stop();
     this._playlist = undefined;
     this.mediaClips = undefined;
     this.activeMedia = undefined;
 
     if (data !== undefined) {
       this._playlist = processMediaClipArray(data);
-      this.mediaClips = [...this._playlist];
-
       await this.initialize();
     }
   }
@@ -123,6 +121,7 @@ export class MediaSequence extends HTMLElement {
 
   public async stop() {
     this.playbackLoopRunning = false;
+    this.mediaClips = undefined;
     if (this.activeMedia) {
       this.activeMedia.dispose();
       this.shadow.removeChild(this.activeMedia.renderableElement);
@@ -133,12 +132,8 @@ export class MediaSequence extends HTMLElement {
       this.loadingMedia = undefined;
       this.loadingMediaPromise = undefined;
     }
-    if (this.playlist) {
-      this.mediaClips = [...this.playlist];
-      await this.initialize();
-    } else {
-      this.mediaClips = undefined;
-    }
+
+    await this.initialize();
   }
 
   private dispatchError(message: string, error: unknown) {
@@ -156,10 +151,12 @@ export class MediaSequence extends HTMLElement {
       if (this.activeMedia.ended) {
         try {
           // eslint-disable-next-line no-await-in-loop
-          await this.nextMedia();
+          if (!(await this.nextMedia())) return;
         } catch (error) {
+          // eslint-disable-next-line no-await-in-loop
+          await this.stop();
           this.dispatchError('Media load error', error);
-          return; //XXX cleanup state? stop()?
+          return;
         }
       }
       const frameDelayTime = rate - (performance.now() - frameBeginTime);
@@ -167,11 +164,10 @@ export class MediaSequence extends HTMLElement {
         // eslint-disable-next-line no-await-in-loop
         await delay(frameDelayTime);
     }
-    //XXX cleanup state/stop()? if this.activeMedia undefined
   }
 
   private async nextMedia() {
-    if (!this.mediaClips || !this.activeMedia) return;
+    if (!this.mediaClips || !this.activeMedia) return false;
 
     if (this.loadingMedia) {
       const currentMedia = this.activeMedia;
@@ -190,22 +186,24 @@ export class MediaSequence extends HTMLElement {
         this.loadingMedia = undefined;
         this.loadingMediaPromise = undefined;
       }
-    } else {
-      this.stop();
+      return true;
     }
+    await this.stop();
+    return false;
   }
 
   private async initialize() {
-    if (!this.mediaClips) return;
+    if (!this._playlist) return;
+    this.mediaClips = [...this._playlist];
     try {
-      this.activeMedia = createMedia(this.mediaClips[0]);
-      await this.activeMedia.load();
-      this.shadow.replaceChildren(this.activeMedia.renderableElement);
-
       if (this.mediaClips.length > 1) {
         this.loadingMedia = createMedia(this.mediaClips[1]);
         this.loadingMediaPromise = this.loadingMedia.load();
       }
+
+      this.activeMedia = createMedia(this.mediaClips[0]);
+      await this.activeMedia.load();
+      this.shadow.replaceChildren(this.activeMedia.renderableElement);
     } catch (error) {
       this.dispatchError('Media load error', error);
     }
