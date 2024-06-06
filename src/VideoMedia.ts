@@ -63,14 +63,6 @@ export class VideoMedia extends Media<HTMLVideoElement> {
     );
   }
 
-  public get ended() {
-    return (
-      this.element.ended ||
-      (this.mediaClip.endTime !== undefined &&
-        this.currentTime >= this.mediaClip.endTime)
-    );
-  }
-
   private onTimeUpdate = () => {
     this.synchronizeClock(this.element.currentTime * 1000);
   };

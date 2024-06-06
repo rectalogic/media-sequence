@@ -10,7 +10,7 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
 
   private _element: E;
 
-  private _transformAnimation?: Animation;
+  private _animations: Animation[] = [];
 
   private _container: HTMLElement;
 
@@ -70,8 +70,10 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
         duration: this.duration - (startOffset + endOffset),
         fill: 'forwards',
       });
-      this._transformAnimation = new Animation(effect);
-      this._transformAnimation.pause();
+      const transform = new Animation(effect);
+      transform.currentTime = this.mediaClip.startTime;
+      transform.pause();
+      this._animations.push(transform);
     }
   }
 
@@ -106,18 +108,17 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
 
   protected startClock() {
     this._mediaClock.play();
-    if (this._transformAnimation) this._transformAnimation.play();
+    for (const animation of this._animations) animation.play();
   }
 
   protected pauseClock() {
     this._mediaClock.pause();
-    if (this._transformAnimation) this._transformAnimation.pause();
+    for (const animation of this._animations) animation.pause();
   }
 
-  //XXX sync all animations
   protected synchronizeClock(time: number) {
     this._mediaClock.currentTime = time;
-    if (this._transformAnimation) this._transformAnimation.currentTime = time;
+    for (const animation of this._animations) animation.currentTime = time;
   }
 
   public get currentTime() {
@@ -125,13 +126,10 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
     // https://github.com/microsoft/TypeScript/issues/54496
     return this._mediaClock.currentTime !== null
       ? (this._mediaClock.currentTime as number)
-      : this.mediaClip.startTime; //XXX this is ms, make everything ms now?
+      : this.mediaClip.startTime;
   }
 
   public abstract get duration(): number;
-
-  //XXX hmm, can MediaSequence just "await media.finished" (i.e. animation.finished promise?)
-  public abstract get ended(): boolean;
 
   public get playing() {
     return this._mediaClock.playState === 'running';
@@ -144,8 +142,7 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
   public dispose(): void {
     this._disposed = true;
     this._mediaClock.cancel();
-    if (this._transformAnimation !== undefined)
-      this._transformAnimation.cancel();
+    for (const animation of this._animations) animation.cancel();
   }
 
   protected get disposed() {

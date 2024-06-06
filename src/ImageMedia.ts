@@ -39,14 +39,6 @@ export class ImageMedia extends Media<HTMLImageElement> {
       : this.mediaClip.endTime - this.mediaClip.startTime;
   }
 
-  public get ended() {
-    return (
-      this.currentTime >=
-      (this.mediaClip.endTime ||
-        this.mediaClip.startTime + ImageMedia.DEFAULT_DURATION)
-    );
-  }
-
   public override play() {
     this.startClock();
   }
