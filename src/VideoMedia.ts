@@ -9,6 +9,10 @@ export class VideoMedia extends Media<HTMLVideoElement> {
     super(mediaClip, document.createElement('video'));
     this.element.preload = 'auto';
     this.element.crossOrigin = 'anonymous';
+    this.element.ontimeupdate = this.onTimeUpdate;
+    this.element.onplaying = this.onPlaying;
+    this.element.onwaiting = this.onWaiting;
+    this.element.onpause = this.onPause;
   }
 
   public load() {
@@ -24,9 +28,9 @@ export class VideoMedia extends Media<HTMLVideoElement> {
         this.mediaClip.startTime !== 0 ||
         this.mediaClip.endTime !== undefined
       ) {
-        const t = [this.mediaClip.startTime];
+        const t = [this.mediaClip.startTime / 1000];
         if (this.mediaClip.endTime !== undefined) {
-          t.push(this.mediaClip.endTime);
+          t.push(this.mediaClip.endTime / 1000);
         }
         this.element.src = new URL(
           `#t=${t.join()}`,
@@ -51,14 +55,10 @@ export class VideoMedia extends Media<HTMLVideoElement> {
     return this.element.videoHeight;
   }
 
-  public get currentTime() {
-    return this.element.currentTime;
-  }
-
   public get duration() {
     return (
       (this.mediaClip.endTime === undefined
-        ? this.element.duration
+        ? this.element.duration * 1000
         : this.mediaClip.endTime) - this.mediaClip.startTime
     );
   }
@@ -71,9 +71,21 @@ export class VideoMedia extends Media<HTMLVideoElement> {
     );
   }
 
-  public get playing(): boolean {
-    return !this.element.paused && !this.ended;
-  }
+  private onTimeUpdate = () => {
+    this.synchronizeClock(this.element.currentTime * 1000);
+  };
+
+  private onPause = () => {
+    this.pauseClock();
+  };
+
+  private onPlaying = () => {
+    this.startClock();
+  };
+
+  private onWaiting = () => {
+    this.pauseClock();
+  };
 
   public play() {
     this.element.play();

@@ -6,6 +6,8 @@ import { MediaClip } from './MediaClip.js';
 // XXX will need to handle the case where we are transitioning video and video/image and one of them stalls/buffers - need to pause the other so they stay in sync?
 
 export abstract class Media<E extends HTMLElement = HTMLElement> {
+  private _mediaClock: Animation;
+
   private _element: E;
 
   private _transformAnimation?: Animation;
@@ -27,12 +29,23 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
     this._container.style.height = '100%';
     this._container.style.overflow = 'hidden';
     this._container.appendChild(element);
+
+    const effect = new KeyframeEffect(null, null);
+    this._mediaClock = new Animation(effect);
   }
 
   public abstract load(): Promise<unknown>;
 
   protected onLoad() {
     if (this.disposed) return;
+
+    // No-op animation that provides our master clock
+    this._mediaClock.effect?.updateTiming({
+      delay: this.mediaClip.startTime,
+      duration: this.duration,
+    });
+    this._mediaClock.currentTime = this.mediaClip.startTime;
+
     if (this.mediaClip.transform) {
       const keyframes = this.mediaClip.transform.keyframes.map(kf => ({
         offset: kf.offset,
@@ -53,8 +66,8 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
           ? this.mediaClip.transform.endOffset
           : 0;
       const effect = new KeyframeEffect(this.element, keyframes, {
-        delay: (this.mediaClip.startTime + startOffset) * 1000,
-        duration: (this.duration - (startOffset + endOffset)) * 1000,
+        delay: this.mediaClip.startTime + startOffset,
+        duration: this.duration - (startOffset + endOffset),
         fill: 'forwards',
       });
       this._transformAnimation = new Animation(effect);
@@ -87,18 +100,42 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
 
   public abstract get intrinsicHeight(): number;
 
-  public abstract get currentTime(): number;
+  public get finished() {
+    return this._mediaClock.finished;
+  }
+
+  protected startClock() {
+    this._mediaClock.play();
+    if (this._transformAnimation) this._transformAnimation.play();
+  }
+
+  protected pauseClock() {
+    this._mediaClock.pause();
+    if (this._transformAnimation) this._transformAnimation.pause();
+  }
+
+  //XXX sync all animations
+  protected synchronizeClock(time: number) {
+    this._mediaClock.currentTime = time;
+    if (this._transformAnimation) this._transformAnimation.currentTime = time;
+  }
+
+  public get currentTime() {
+    // CSSNumberish should always be number for our usecase
+    // https://github.com/microsoft/TypeScript/issues/54496
+    return this._mediaClock.currentTime !== null
+      ? (this._mediaClock.currentTime as number)
+      : this.mediaClip.startTime; //XXX this is ms, make everything ms now?
+  }
 
   public abstract get duration(): number;
 
-  public set animationTime(timestamp: number) {
-    if (this._transformAnimation)
-      this._transformAnimation.currentTime = this.currentTime * 1000;
-  }
-
+  //XXX hmm, can MediaSequence just "await media.finished" (i.e. animation.finished promise?)
   public abstract get ended(): boolean;
 
-  public abstract get playing(): boolean;
+  public get playing() {
+    return this._mediaClock.playState === 'running';
+  }
 
   public abstract play(): void;
 
@@ -106,6 +143,9 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
 
   public dispose(): void {
     this._disposed = true;
+    this._mediaClock.cancel();
+    if (this._transformAnimation !== undefined)
+      this._transformAnimation.cancel();
   }
 
   protected get disposed() {

@@ -5,11 +5,6 @@ import createMedia from './MediaFactory.js';
 import { Media } from './Media.js';
 import { MediaClip, processMediaClipArray } from './MediaClip.js';
 
-const delay = async (ms: number) =>
-  new Promise(resolve => {
-    setTimeout(resolve, ms);
-  });
-
 export class MediaSequence extends HTMLElement {
   // XXX make playlist an api, user can fetch if they need to - see https://web.dev/articles/custom-elements-best-practices
   static get observedAttributes(): string[] {
@@ -26,13 +21,13 @@ export class MediaSequence extends HTMLElement {
 
   private loadingMediaPromise?: Promise<unknown>;
 
-  private playbackLoopRunning: boolean = false;
-
   private _playlist?: ReadonlyArray<MediaClip>;
 
   private mediaClips?: MediaClip[];
 
   private resizeObserver: ResizeObserver;
+
+  private eventLoop?: Promise<void>;
 
   // XXX handle video/img onerror, set error property and fire error event, also set/fire for playlist issues
 
@@ -106,21 +101,17 @@ export class MediaSequence extends HTMLElement {
 
   public play() {
     if (this.activeMedia !== undefined && !this.activeMedia.playing) {
-      this.playbackLoopRunning = true;
       this.activeMedia.play();
-      this.playbackLoop();
     }
   }
 
   public pause() {
-    if (this.activeMedia !== undefined && this.activeMedia.playing) {
-      this.playbackLoopRunning = false;
+    if (this.activeMedia?.playing) {
       this.activeMedia.pause();
     }
   }
 
   public async stop() {
-    this.playbackLoopRunning = false;
     this.mediaClips = undefined;
     if (this.activeMedia) {
       this.activeMedia.dispose();
@@ -142,27 +133,28 @@ export class MediaSequence extends HTMLElement {
     else this.dispatchEvent(new ErrorEvent(message, { error }));
   }
 
-  //XXX we only need rAF for rendering video to canvas, can just use setTimeout for other timing stuff - animation kind of jumpy though
-  private async playbackLoop() {
-    const rate = 50;
-    while (this.playbackLoopRunning && this.activeMedia !== undefined) {
-      const frameBeginTime = performance.now();
-      this.activeMedia.animationTime = frameBeginTime;
-      if (this.activeMedia.ended) {
-        try {
-          // eslint-disable-next-line no-await-in-loop
-          if (!(await this.nextMedia())) return;
-        } catch (error) {
-          // eslint-disable-next-line no-await-in-loop
-          await this.stop();
-          this.dispatchError('Media load error', error);
+  //XXX we only need rAF for rendering video to canvas
+  private async runEventLoop() {
+    while (this.activeMedia !== undefined) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await this.activeMedia.finished;
+      } catch (error) {
+        // Return if animation cancelled
+        if (error instanceof DOMException && error.name === 'AbortError') {
           return;
         }
       }
-      const frameDelayTime = rate - (performance.now() - frameBeginTime);
-      if (frameDelayTime > 0)
+      try {
+        // Return if nothing left to play
         // eslint-disable-next-line no-await-in-loop
-        await delay(frameDelayTime);
+        if (!(await this.nextMedia())) return;
+      } catch (error) {
+        // eslint-disable-next-line no-await-in-loop
+        await this.stop();
+        this.dispatchError('Media load error', error);
+        return;
+      }
     }
   }
 
@@ -194,6 +186,7 @@ export class MediaSequence extends HTMLElement {
 
   private async initialize() {
     if (!this._playlist) return;
+    await this.eventLoop;
     this.mediaClips = [...this._playlist];
     try {
       if (this.mediaClips.length > 1) {
@@ -204,6 +197,8 @@ export class MediaSequence extends HTMLElement {
       this.activeMedia = createMedia(this.mediaClips[0]);
       await this.activeMedia.load();
       this.shadow.replaceChildren(this.activeMedia.renderableElement);
+
+      this.eventLoop = this.runEventLoop();
     } catch (error) {
       this.dispatchError('Media load error', error);
     }

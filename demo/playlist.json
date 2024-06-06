@@ -2,20 +2,20 @@
   {
     "type": "video",
     "src": "https://cdn.glitch.me/364f8e5a-f12f-4f82-a386-20e6be6b1046/bbb_sunflower_1080p_30fps_normal_10min.mp4?v=1715787973754",
-    "startTime": 100,
-    "endTime": 105
+    "startTime": 100000,
+    "endTime": 105000
   },
   {
     "type": "video",
     "src": "https://cdn.glitch.me/364f8e5a-f12f-4f82-a386-20e6be6b1046/elephants_dream_1280x720.mp4?v=1715789814855",
-    "startTime": 100,
-    "endTime": 105
+    "startTime": 100000,
+    "endTime": 105000
   },
   {
     "type": "image",
     "src": "https://gl-transitions.com/static/media/hBd6EPoQT2C8VQYv65ys_White_Sands.51f2958f.jpg",
     "transform": {
-      "startOffset": 1,
+      "startOffset": 1000,
       "keyframes": [
         {
           "offset": 0,
@@ -32,13 +32,13 @@
   {
     "type": "video",
     "src": "https://cdn.glitch.me/364f8e5a-f12f-4f82-a386-20e6be6b1046/bbb_sunflower_1080p_30fps_normal_10min.mp4?v=1715787973754",
-    "startTime": 5,
-    "endTime": 10
+    "startTime": 5000,
+    "endTime": 10000
   },
   {
     "type": "video",
     "src": "https://cdn.glitch.me/364f8e5a-f12f-4f82-a386-20e6be6b1046/elephants_dream_1280x720.mp4?v=1715789814855",
-    "startTime": 200,
-    "endTime": 205
+    "startTime": 200000,
+    "endTime": 205000
   }
 ]
