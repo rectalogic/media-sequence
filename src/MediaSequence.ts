@@ -69,7 +69,8 @@ export class MediaSequence extends HTMLElement {
   }
 
   public async setPlaylist(data: unknown) {
-    await this.stop();
+    this.stop();
+    await this.eventLoop;
     this._playlist = undefined;
     this.mediaClips = undefined;
     this.activeMedia = undefined;
@@ -111,7 +112,7 @@ export class MediaSequence extends HTMLElement {
     }
   }
 
-  public async stop() {
+  public stop() {
     this.mediaClips = undefined;
     if (this.activeMedia) {
       this.activeMedia.dispose();
@@ -123,8 +124,6 @@ export class MediaSequence extends HTMLElement {
       this.loadingMedia = undefined;
       this.loadingMediaPromise = undefined;
     }
-
-    await this.initialize();
   }
 
   private dispatchError(message: string, error: unknown) {
@@ -144,14 +143,24 @@ export class MediaSequence extends HTMLElement {
         if (error instanceof DOMException && error.name === 'AbortError') {
           return;
         }
+        this.stop();
+        this.eventLoop = undefined;
+        this.dispatchError('Media playback error', error);
+        return;
       }
       try {
-        // Return if nothing left to play
+        // Finished sequence, reinitialize and return
         // eslint-disable-next-line no-await-in-loop
-        if (!(await this.nextMedia())) return;
+        if (!(await this.nextMedia())) {
+          this.stop();
+          // Unset eventLoop since initialize will await it
+          this.eventLoop = undefined;
+          this.initialize();
+          return;
+        }
       } catch (error) {
-        // eslint-disable-next-line no-await-in-loop
-        await this.stop();
+        this.stop();
+        this.eventLoop = undefined;
         this.dispatchError('Media load error', error);
         return;
       }
@@ -180,7 +189,6 @@ export class MediaSequence extends HTMLElement {
       }
       return true;
     }
-    await this.stop();
     return false;
   }
 
