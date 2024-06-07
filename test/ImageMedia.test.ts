@@ -3,9 +3,15 @@
 import { expect, assert } from '@open-wc/testing';
 import { ImageMedia } from '../src/ImageMedia.js';
 
+class TestImageMedia extends ImageMedia {
+  public override set currentTime(time: number) {
+    this.synchronizeClock(time);
+  }
+}
+
 describe('ImageMedia', () => {
   it('delays transforms', async () => {
-    const media = new ImageMedia({
+    const media = new TestImageMedia({
       type: 'image',
       src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==',
       startTime: 0,
@@ -27,7 +33,7 @@ describe('ImageMedia', () => {
     assert(element);
     const liveStyle = getComputedStyle(element);
     media.play();
-    /*
+
     const results = [
       { time: 0, transform: 'none' },
       { time: 500, transform: 'none' },
@@ -38,9 +44,8 @@ describe('ImageMedia', () => {
       { time: 5000, transform: 'matrix(1, 0, 0, 1, 0, 100)' },
     ];
     for (const { time, transform } of results) {
-      media.animationTime = time;
-      expect(liveStyle.transform).to.equal(transform, `animationTime ${time}`);
+      media.currentTime = time;
+      expect(liveStyle.transform).to.equal(transform, `currentTime ${time}`);
     }
-*/
   });
 });
