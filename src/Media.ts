@@ -75,6 +75,27 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
       transform.pause();
       this._animations.push(transform);
     }
+
+    if (this.mediaClip.animations) {
+      for (const animation of this.mediaClip.animations) {
+        const startOffset =
+          animation.startOffset !== undefined ? animation.startOffset : 0;
+        const endOffset =
+          animation.endOffset !== undefined ? animation.endOffset : 0;
+        const effect = new KeyframeEffect(
+          this.renderableElement,
+          animation.keyframes,
+          {
+            delay: this.mediaClip.startTime + startOffset,
+            duration: this.duration - (startOffset + endOffset),
+          },
+        );
+        const transform = new Animation(effect);
+        transform.currentTime = this.mediaClip.startTime;
+        transform.pause();
+        this._animations.push(transform);
+      }
+    }
   }
 
   public get mediaClip() {

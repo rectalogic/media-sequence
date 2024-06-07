@@ -28,6 +28,23 @@ const mediaClipDecoder = D.exact({
       ),
     }),
   ),
+  animations: D.optional(
+    D.array(
+      D.exact({
+        startOffset: D.optional(D.number),
+        endOffset: D.optional(D.number),
+        keyframes: D.array(
+          D.inexact({
+            composite: D.optional(
+              D.oneOf(['accumulate', 'add', 'auto', 'replace']),
+            ),
+            easing: D.optional(D.string),
+            offset: D.optional(D.nullable(D.number)),
+          }).pipe(D.record(D.optional(D.either(D.string, D.number, D.null_)))),
+        ),
+      }),
+    ),
+  ),
 });
 
 const mediaClipsDecoder = D.array(mediaClipDecoder);
