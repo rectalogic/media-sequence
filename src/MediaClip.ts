@@ -9,7 +9,13 @@ const mediaClipDecoder = D.exact({
   startTime: D.optional(D.number, 0),
   endTime: D.optional(D.number),
   objectFit: D.optional(
-    D.oneOf(['fill', 'contain', 'cover', 'none', 'scale-down']),
+    D.either(
+      D.constant('fill'),
+      D.constant('contain'),
+      D.constant('cover'),
+      D.constant('none'),
+      D.constant('scale-down'),
+    ),
     'contain',
   ),
   transform: D.optional(
@@ -33,10 +39,36 @@ const mediaClipDecoder = D.exact({
       D.exact({
         startOffset: D.optional(D.number),
         endOffset: D.optional(D.number),
+        composite: D.optional(
+          D.either(
+            D.constant('accumulate'),
+            D.constant('add'),
+            D.constant('replace'),
+          ),
+        ),
+        fill: D.optional(
+          D.either(
+            D.constant('auto'),
+            D.constant('backwards'),
+            D.constant('both'),
+            D.constant('forwards'),
+            D.constant('none'),
+          ),
+        ),
+        easing: D.optional(D.string),
+        iterations: D.optional(D.number),
+        iterationComposite: D.optional(
+          D.either(D.constant('accumulate'), D.constant('replace')),
+        ),
         keyframes: D.array(
           D.inexact({
             composite: D.optional(
-              D.oneOf(['accumulate', 'add', 'auto', 'replace']),
+              D.either(
+                D.constant('accumulate'),
+                D.constant('add'),
+                D.constant('auto'),
+                D.constant('replace'),
+              ),
             ),
             easing: D.optional(D.string),
             offset: D.optional(D.nullable(D.number)),

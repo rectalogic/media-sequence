@@ -8,6 +8,7 @@
       {
         "startOffset": 500,
         "endOffset": 1000,
+        "iterations": 2,
         "keyframes": [
           { "transform": "translateY(0px)" },
           { "transform": "translateY(200px)" },

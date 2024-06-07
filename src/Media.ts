@@ -87,7 +87,15 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
           animation.keyframes,
           {
             delay: this.mediaClip.startTime + startOffset,
-            duration: this.duration - (startOffset + endOffset),
+            // Make all iterations play within our duration
+            duration:
+              (this.duration - (startOffset + endOffset)) /
+              (animation.iterations === undefined ? 1 : animation.iterations),
+            composite: animation.composite,
+            fill: animation.fill,
+            easing: animation.easing,
+            iterations: animation.iterations,
+            iterationComposite: animation.iterationComposite,
           },
         );
         const transform = new Animation(effect);
