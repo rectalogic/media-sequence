@@ -9,6 +9,7 @@ export class VideoMedia extends Media<HTMLVideoElement> {
     super(mediaClip, document.createElement('video'));
     this.element.preload = 'auto';
     this.element.crossOrigin = 'anonymous';
+    this.element.disablePictureInPicture = true;
     this.element.ontimeupdate = this.onTimeUpdate;
     this.element.onplaying = this.onPlaying;
     this.element.onwaiting = this.onWaiting;
