@@ -18,8 +18,12 @@ export class ImageMedia extends Media<HTMLImageElement> {
       this.element.onerror = event =>
         reject(new Error('Image error', { cause: event }));
       this.element.onload = () => {
-        this.onLoad();
-        resolve(this);
+        try {
+          this.onLoad();
+          resolve(this);
+        } catch (error) {
+          reject(error);
+        }
       };
       this.element.src = this.mediaClip.src;
     });

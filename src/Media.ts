@@ -34,6 +34,40 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
 
   public abstract load(): Promise<unknown>;
 
+  // Positive offset is from startTime, negative is from endTime
+  private computeAnimationDelayDuration(
+    startOffset?: number,
+    endOffset?: number,
+  ) {
+    let startTime;
+    if (startOffset === undefined) startTime = this.mediaClip.startTime;
+    else if (startOffset >= 0)
+      startTime = this.mediaClip.startTime + startOffset;
+    // Subtract offset from duration
+    else startTime = this.mediaClip.startTime + (this.duration + startOffset);
+
+    const mediaEndTime =
+      this.mediaClip.endTime === undefined
+        ? this.mediaClip.startTime + this.duration
+        : this.mediaClip.endTime;
+    let endTime;
+    if (endOffset === undefined) {
+      endTime = mediaEndTime;
+    } else if (endOffset >= 0) endTime = this.mediaClip.startTime + endOffset;
+    // Subtract offset from duration
+    else endTime = this.mediaClip.startTime + (this.duration + endOffset);
+
+    if (startTime < this.mediaClip.startTime || endTime > mediaEndTime)
+      throw new Error('Out of range animation offsets', {
+        cause: this.mediaClip,
+      });
+
+    return {
+      delay: startTime,
+      duration: endTime - startTime,
+    };
+  }
+
   protected onLoad() {
     if (this.disposed) return;
 
@@ -55,17 +89,11 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
         }) rotate(${kf.rotate !== undefined ? kf.rotate : 0}deg)`,
       }));
 
-      const startOffset =
-        this.mediaClip.transform.startOffset !== undefined
-          ? this.mediaClip.transform.startOffset
-          : 0;
-      const endOffset =
-        this.mediaClip.transform.endOffset !== undefined
-          ? this.mediaClip.transform.endOffset
-          : 0;
       const effect = new KeyframeEffect(this.element, keyframes, {
-        delay: this.mediaClip.startTime + startOffset,
-        duration: this.duration - (startOffset + endOffset),
+        ...this.computeAnimationDelayDuration(
+          this.mediaClip.transform.startOffset,
+          this.mediaClip.transform.endOffset,
+        ),
         fill: 'forwards',
       });
       const transform = new Animation(effect);
@@ -76,19 +104,19 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
 
     if (this.mediaClip.animations) {
       for (const animation of this.mediaClip.animations) {
-        const startOffset =
-          animation.startOffset !== undefined ? animation.startOffset : 0;
-        const endOffset =
-          animation.endOffset !== undefined ? animation.endOffset : 0;
+        const timing = this.computeAnimationDelayDuration(
+          animation.startOffset,
+          animation.endOffset,
+        );
+        // Make all iterations play within our duration
+        timing.duration /=
+          animation.iterations === undefined ? 1 : animation.iterations;
+
         const effect = new KeyframeEffect(
           this.renderableElement,
           animation.keyframes,
           {
-            delay: this.mediaClip.startTime + startOffset,
-            // Make all iterations play within our duration
-            duration:
-              (this.duration - (startOffset + endOffset)) /
-              (animation.iterations === undefined ? 1 : animation.iterations),
+            ...timing,
             composite: animation.composite,
             fill: animation.fill,
             easing: animation.easing,

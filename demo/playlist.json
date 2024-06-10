@@ -7,7 +7,7 @@
     "animations": [
       {
         "startOffset": 500,
-        "endOffset": 1000,
+        "endOffset": -1000,
         "iterations": 2,
         "keyframes": [
           { "transform": "translateY(0px)" },
@@ -45,7 +45,13 @@
     "type": "video",
     "src": "https://cdn.glitch.me/364f8e5a-f12f-4f82-a386-20e6be6b1046/bbb_sunflower_1080p_30fps_normal_10min.mp4?v=1715787973754",
     "startTime": 5000,
-    "endTime": 10000
+    "endTime": 10000,
+    "animations": [
+      {
+        "startOffset": -1000,
+        "keyframes": [{ "filter": "sepia(0)" }, { "filter": "sepia(1)" }]
+      }
+    ]
   },
   {
     "type": "video",

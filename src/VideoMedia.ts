@@ -21,8 +21,12 @@ export class VideoMedia extends Media<HTMLVideoElement> {
       this.element.onerror = () =>
         reject(new Error('Video error', { cause: this.element.error }));
       this.element.oncanplay = () => {
-        this.onLoad();
-        resolve(this);
+        try {
+          this.onLoad();
+          resolve(this);
+        } catch (error) {
+          reject(error);
+        }
       };
       // Use media fragments https://www.w3.org/TR/media-frags/
       if (
