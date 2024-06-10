@@ -93,9 +93,14 @@ export class MediaSequence extends HTMLElement {
         display: none;
       }
       :host {
-        display: inline-block;
+        display: inline-grid;
+        grid-template-areas: "media";
         width: ${width !== null ? `${width}px` : 'auto'};
         height: ${height !== null ? `${height}px` : 'auto'};
+      }
+      .media {
+        grid-area: media;
+        overflow: hidden;
       }
     `);
   }

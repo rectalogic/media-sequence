@@ -25,9 +25,7 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
     this._element.style.objectFit = mediaClip.objectFit;
     this._mediaClip = mediaClip;
     this._container = document.createElement('div');
-    this._container.style.width = '100%';
-    this._container.style.height = '100%';
-    this._container.style.overflow = 'hidden';
+    this._container.className = 'media';
     this._container.appendChild(element);
 
     const effect = new KeyframeEffect(null, null);
