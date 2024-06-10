@@ -32,7 +32,24 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
     this._mediaClock = new Animation(effect);
   }
 
-  public abstract load(): Promise<unknown>;
+  public load() {
+    return new Promise((resolve, reject) => {
+      const handleResolve = (value: unknown) => {
+        try {
+          this.configureAnimations();
+          resolve(value);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      this.handleLoad(handleResolve, reject);
+    });
+  }
+
+  protected abstract handleLoad(
+    resolve: (value: unknown) => void,
+    reject: (reason?: any) => void,
+  ): void;
 
   // Positive offset is from startTime, negative is from endTime
   private computeAnimationDelayDuration(
@@ -68,7 +85,7 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
     };
   }
 
-  protected onLoad() {
+  protected configureAnimations() {
     if (this.disposed) return;
 
     // No-op animation that provides our master clock

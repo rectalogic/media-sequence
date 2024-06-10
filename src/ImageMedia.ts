@@ -13,20 +13,16 @@ export class ImageMedia extends Media<HTMLImageElement> {
     this.element.crossOrigin = 'anonymous';
   }
 
-  public load() {
-    return new Promise((resolve, reject) => {
-      this.element.onerror = event =>
-        reject(new Error('Image error', { cause: event }));
-      this.element.onload = () => {
-        try {
-          this.onLoad();
-          resolve(this);
-        } catch (error) {
-          reject(error);
-        }
-      };
-      this.element.src = this.mediaClip.src;
-    });
+  protected handleLoad(
+    resolve: (value: unknown) => void,
+    reject: (reason?: any) => void,
+  ) {
+    this.element.onerror = event =>
+      reject(new Error('Image error', { cause: event }));
+    this.element.onload = () => {
+      resolve(this);
+    };
+    this.element.src = this.mediaClip.src;
   }
 
   public get duration() {

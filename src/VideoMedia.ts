@@ -16,36 +16,31 @@ export class VideoMedia extends Media<HTMLVideoElement> {
     this.element.onpause = this.onPause;
   }
 
-  public load() {
-    return new Promise((resolve, reject) => {
-      this.element.onerror = () =>
-        reject(new Error('Video error', { cause: this.element.error }));
-      this.element.oncanplay = () => {
-        try {
-          this.onLoad();
-          resolve(this);
-        } catch (error) {
-          reject(error);
-        }
-      };
-      // Use media fragments https://www.w3.org/TR/media-frags/
-      if (
-        this.mediaClip.startTime !== 0 ||
-        this.mediaClip.endTime !== undefined
-      ) {
-        const t = [this.mediaClip.startTime / 1000];
-        if (this.mediaClip.endTime !== undefined) {
-          t.push(this.mediaClip.endTime / 1000);
-        }
-        this.element.src = new URL(
-          `#t=${t.join()}`,
-          this.mediaClip.src,
-        ).toString();
-      } else {
-        this.element.src = this.mediaClip.src;
+  protected handleLoad(
+    resolve: (value: unknown) => void,
+    reject: (reason?: any) => void,
+  ) {
+    this.element.onerror = () =>
+      reject(new Error('Video error', { cause: this.element.error }));
+    this.element.oncanplay = () => resolve(this);
+
+    // Use media fragments https://www.w3.org/TR/media-frags/
+    if (
+      this.mediaClip.startTime !== 0 ||
+      this.mediaClip.endTime !== undefined
+    ) {
+      const t = [this.mediaClip.startTime / 1000];
+      if (this.mediaClip.endTime !== undefined) {
+        t.push(this.mediaClip.endTime / 1000);
       }
-      this.element.load();
-    });
+      this.element.src = new URL(
+        `#t=${t.join()}`,
+        this.mediaClip.src,
+      ).toString();
+    } else {
+      this.element.src = this.mediaClip.src;
+    }
+    this.element.load();
   }
 
   // XXX endTime could be > duration
