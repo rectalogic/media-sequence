@@ -6,7 +6,6 @@ import { Media } from './Media.js';
 import { MediaClip, processMediaClipArray } from './MediaClip.js';
 
 export class MediaSequence extends HTMLElement {
-  // XXX make playlist an api, user can fetch if they need to - see https://web.dev/articles/custom-elements-best-practices
   static get observedAttributes(): string[] {
     return ['width', 'height'];
   }
@@ -25,16 +24,7 @@ export class MediaSequence extends HTMLElement {
 
   private mediaClips?: MediaClip[];
 
-  private resizeObserver: ResizeObserver;
-
   private eventLoop?: Promise<void>;
-
-  // XXX handle video/img onerror, set error property and fire error event, also set/fire for playlist issues
-
-  // styling canvas just stretches content, width/height are the real size
-  // video is different, it object-fits video into the styled element (or used w/h or native size)
-  // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/canvas#sizing_the_canvas_using_css_versus_html
-  // so just use w/h and force it
 
   constructor() {
     super();
@@ -42,11 +32,6 @@ export class MediaSequence extends HTMLElement {
     this.sheet = new CSSStyleSheet();
     this.onSizeAttributesChanged();
     this.shadow.adoptedStyleSheets.push(this.sheet);
-    this.resizeObserver = new ResizeObserver(() => {
-      //if (this.activeMedia) this.updateCanvasSize(this.activeMedia);
-      // XXX resize both medias since they may have canvases
-    });
-    this.resizeObserver.observe(this, { box: 'content-box' });
   }
 
   public connectedCallback() {
@@ -137,7 +122,6 @@ export class MediaSequence extends HTMLElement {
     else this.dispatchEvent(new ErrorEvent(message, { error }));
   }
 
-  //XXX we only need rAF for rendering video to canvas
   private async runEventLoop() {
     while (this.activeMedia !== undefined) {
       try {

@@ -29,14 +29,6 @@ export class ImageMedia extends Media<HTMLImageElement> {
     });
   }
 
-  public get intrinsicWidth() {
-    return this.element.naturalWidth;
-  }
-
-  public get intrinsicHeight() {
-    return this.element.naturalHeight;
-  }
-
   public get duration() {
     return this.mediaClip.endTime === undefined
       ? ImageMedia.DEFAULT_DURATION
