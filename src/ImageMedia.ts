@@ -31,11 +31,11 @@ export class ImageMedia extends Media<HTMLImageElement> {
       : this.mediaClip.endTime - this.mediaClip.startTime;
   }
 
-  public override play() {
+  public play() {
     this.startClock();
   }
 
-  public override pause() {
+  public pause() {
     this.pauseClock();
   }
 

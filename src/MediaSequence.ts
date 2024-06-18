@@ -106,7 +106,6 @@ export class MediaSequence extends HTMLElement {
     this.mediaClips = undefined;
     if (this.activeMedia) {
       this.activeMedia.dispose();
-      this.shadow.removeChild(this.activeMedia.renderableElement);
       this.activeMedia = undefined;
     }
     if (this.loadingMedia) {
@@ -126,7 +125,20 @@ export class MediaSequence extends HTMLElement {
     while (this.activeMedia !== undefined) {
       try {
         // eslint-disable-next-line no-await-in-loop
-        await this.activeMedia.finished;
+        if (await this.activeMedia.finished) {
+          if (this.loadingMedia) {
+            // eslint-disable-next-line no-await-in-loop
+            await this.loadingMediaPromise;
+            this.shadow.insertBefore(
+              this.loadingMedia.renderableElement,
+              this.activeMedia.renderableElement,
+            );
+            this.loadingMedia.play();
+            this.activeMedia.play();
+            // eslint-disable-next-line no-await-in-loop
+            await this.activeMedia.finished;
+          }
+        }
       } catch (error) {
         // Return if animation cancelled
         if (error instanceof DOMException && error.name === 'AbortError') {
@@ -163,11 +175,10 @@ export class MediaSequence extends HTMLElement {
       const currentMedia = this.activeMedia;
       await this.loadingMediaPromise;
       this.activeMedia = this.loadingMedia;
-      this.shadow.replaceChildren(this.activeMedia.renderableElement);
-
-      currentMedia.dispose();
       this.mediaClips.shift();
       this.activeMedia.play();
+      this.shadow.replaceChildren(this.activeMedia.renderableElement);
+      currentMedia.dispose();
 
       if (this.mediaClips.length > 1) {
         this.loadingMedia = createMedia(this.mediaClips[1]);

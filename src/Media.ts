@@ -16,6 +16,8 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
 
   private _mediaClip: MediaClip;
 
+  private _overlap?: number;
+
   private _disposed: boolean = false;
 
   constructor(mediaClip: MediaClip, element: E) {
@@ -32,11 +34,12 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
     this._mediaClock = new Animation(effect);
   }
 
-  public load() {
+  public load(overlap?: number) {
+    this._overlap = overlap;
     return new Promise((resolve, reject) => {
       const handleResolve = (value: unknown) => {
         try {
-          this.configureAnimations();
+          this.configureAnimations(overlap);
           resolve(value);
         } catch (error) {
           reject(error);
@@ -85,13 +88,13 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
     };
   }
 
-  protected configureAnimations() {
+  protected configureAnimations(overlap?: number) {
     if (this.disposed) return;
 
     // No-op animation that provides our master clock
     this._mediaClock.effect?.updateTiming({
       delay: this.mediaClip.startTime,
-      duration: this.duration,
+      duration: this.duration - (overlap || 0),
     });
     this._mediaClock.currentTime = this.mediaClip.startTime;
 
@@ -161,8 +164,18 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
     return this._element;
   }
 
+  private async awaitFinished() {
+    await this._mediaClock.finished;
+    if (this._overlap) {
+      this._overlap = undefined;
+      this._mediaClock.effect?.updateTiming({ duration: this.duration });
+      return true;
+    }
+    return false;
+  }
+
   public get finished() {
-    return this._mediaClock.finished;
+    return this.awaitFinished();
   }
 
   protected startClock() {
@@ -199,6 +212,7 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
   public abstract pause(): void;
 
   public dispose(): void {
+    this.renderableElement.parentNode?.removeChild(this.renderableElement);
     this._disposed = true;
     this._mediaClock.cancel();
     for (const animation of this._animations) animation.cancel();
