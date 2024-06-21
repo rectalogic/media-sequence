@@ -166,7 +166,7 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
 
   private async awaitFinished() {
     await this._mediaClock.finished;
-    if (this._overlap) {
+    if (this._overlap !== undefined) {
       this._overlap = undefined;
       this._mediaClock.effect?.updateTiming({ duration: this.duration });
       return true;
