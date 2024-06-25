@@ -16,8 +16,6 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
 
   private _mediaClip: MediaClip;
 
-  private _overlap?: number;
-
   private _disposed: boolean = false;
 
   constructor(mediaClip: MediaClip, element: E) {
@@ -30,16 +28,14 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
     this._container.className = 'media';
     this._container.appendChild(element);
 
-    const effect = new KeyframeEffect(null, null);
-    this._mediaClock = new Animation(effect);
+    this._mediaClock = new Animation(new KeyframeEffect(null, null));
   }
 
-  public load(overlap?: number) {
-    this._overlap = overlap;
+  public load() {
     return new Promise((resolve, reject) => {
       const handleResolve = (value: unknown) => {
         try {
-          this.configureAnimations(overlap);
+          this.configureAnimations();
           resolve(value);
         } catch (error) {
           reject(error);
@@ -88,13 +84,14 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
     };
   }
 
-  protected configureAnimations(overlap?: number) {
+  protected configureAnimations() {
     if (this.disposed) return;
 
+    const overlap = this.mediaClip.transition?.overlap || 0;
     // No-op animation that provides our master clock
     this._mediaClock.effect?.updateTiming({
       delay: this.mediaClip.startTime,
-      duration: this.duration - (overlap || 0),
+      duration: this.duration - overlap,
     });
     this._mediaClock.currentTime = this.mediaClip.startTime;
 
@@ -144,10 +141,10 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
             iterationComposite: animation.iterationComposite,
           },
         );
-        const transform = new Animation(effect);
-        transform.currentTime = this.mediaClip.startTime;
-        transform.pause();
-        this._animations.push(transform);
+        const anim = new Animation(effect);
+        anim.currentTime = this.mediaClip.startTime;
+        anim.pause();
+        this._animations.push(anim);
       }
     }
   }
@@ -166,12 +163,9 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
 
   private async awaitFinished() {
     await this._mediaClock.finished;
-    if (this._overlap !== undefined) {
-      this._overlap = undefined;
+    if (this.mediaClip.transition !== undefined) {
       this._mediaClock.effect?.updateTiming({ duration: this.duration });
-      return true;
     }
-    return false;
   }
 
   public get finished() {
@@ -211,7 +205,7 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
 
   public abstract pause(): void;
 
-  public dispose(): void {
+  public cancel(): void {
     this.renderableElement.parentNode?.removeChild(this.renderableElement);
     this._disposed = true;
     this._mediaClock.cancel();

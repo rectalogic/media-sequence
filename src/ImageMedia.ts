@@ -39,8 +39,8 @@ export class ImageMedia extends Media<HTMLImageElement> {
     this.pauseClock();
   }
 
-  public override dispose() {
-    super.dispose();
+  public override cancel() {
+    super.cancel();
     this.pause();
     this.element.removeAttribute('src');
   }

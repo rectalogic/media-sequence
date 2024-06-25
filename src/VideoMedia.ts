@@ -77,8 +77,8 @@ export class VideoMedia extends Media<HTMLVideoElement> {
     this.element.pause();
   }
 
-  public override dispose() {
-    super.dispose();
+  public override cancel() {
+    super.cancel();
     this.pause();
     this.element.removeAttribute('src');
   }

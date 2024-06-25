@@ -3,7 +3,13 @@
 
 import createMedia from './MediaFactory.js';
 import { Media } from './Media.js';
-import { MediaClip, processMediaClipArray } from './MediaClip.js';
+import { MediaClip, Transition, processMediaClipArray } from './MediaClip.js';
+
+interface Playable {
+  play(): void;
+  pause(): void;
+  cancel(): void;
+}
 
 export class MediaSequence extends HTMLElement {
   static get observedAttributes(): string[] {
@@ -17,6 +23,8 @@ export class MediaSequence extends HTMLElement {
   private activeMedia?: Media;
 
   private loadingMedia?: Media;
+
+  private playables: Playable[] = [];
 
   private loadingMediaPromise?: Promise<unknown>;
 
@@ -57,6 +65,7 @@ export class MediaSequence extends HTMLElement {
     this.stop();
     await this.eventLoop;
     this._playlist = undefined;
+    this.playables = [];
     this.mediaClips = undefined;
     this.activeMedia = undefined;
 
@@ -91,25 +100,23 @@ export class MediaSequence extends HTMLElement {
   }
 
   public play() {
-    if (this.activeMedia !== undefined && !this.activeMedia.playing) {
-      this.activeMedia.play();
-    }
+    for (const playable of this.playables) playable.play();
   }
 
   public pause() {
-    if (this.activeMedia?.playing) {
-      this.activeMedia.pause();
-    }
+    for (const playable of this.playables) playable.pause();
   }
 
   public stop() {
     this.mediaClips = undefined;
+    for (const playable of this.playables) playable.cancel();
+    this.playables = [];
     if (this.activeMedia) {
-      this.activeMedia.dispose();
+      this.activeMedia.cancel();
       this.activeMedia = undefined;
     }
     if (this.loadingMedia) {
-      this.loadingMedia.dispose();
+      this.loadingMedia.cancel();
       this.loadingMedia = undefined;
       this.loadingMediaPromise = undefined;
     }
@@ -121,23 +128,59 @@ export class MediaSequence extends HTMLElement {
     else this.dispatchEvent(new ErrorEvent(message, { error }));
   }
 
+  private static createTransitionAnimations(
+    element: HTMLElement,
+    transitions: Transition[],
+    overlap: number,
+  ) {
+    return transitions.map(transition => {
+      const effect = new KeyframeEffect(element, transition.keyframes, {
+        duration: overlap / (transition.iterations || 1),
+        composite: transition.composite,
+        fill: transition.fill,
+        easing: transition.easing,
+        iterations: transition.iterations,
+        iterationComposite: transition.iterationComposite,
+      });
+      const animation = new Animation(effect);
+      animation.pause();
+      return animation;
+    });
+  }
+
   private async runEventLoop() {
     while (this.activeMedia !== undefined) {
       try {
         // eslint-disable-next-line no-await-in-loop
-        if (await this.activeMedia.finished) {
-          if (this.loadingMedia) {
-            // eslint-disable-next-line no-await-in-loop
-            await this.loadingMediaPromise;
-            this.shadow.insertBefore(
-              this.loadingMedia.renderableElement,
+        await this.activeMedia.finished;
+        if (this.loadingMedia && this.activeMedia.mediaClip.transition) {
+          // eslint-disable-next-line no-await-in-loop
+          await this.loadingMediaPromise;
+          this.shadow.insertBefore(
+            this.loadingMedia.renderableElement,
+            this.activeMedia.renderableElement,
+          );
+          const transitions = [
+            ...MediaSequence.createTransitionAnimations(
               this.activeMedia.renderableElement,
-            );
-            this.loadingMedia.play();
-            this.activeMedia.play();
-            // eslint-disable-next-line no-await-in-loop
-            await this.activeMedia.finished;
-          }
+              this.activeMedia.mediaClip.transition.source,
+              this.activeMedia.mediaClip.transition.overlap,
+            ),
+            ...MediaSequence.createTransitionAnimations(
+              this.loadingMedia.renderableElement,
+              this.activeMedia.mediaClip.transition.dest,
+              this.activeMedia.mediaClip.transition.overlap,
+            ),
+          ];
+          this.playables = [
+            this.loadingMedia,
+            this.activeMedia,
+            ...transitions,
+          ];
+          this.play();
+
+          // eslint-disable-next-line no-await-in-loop
+          await Promise.all(transitions.map(t => t.finished));
         }
       } catch (error) {
         // Return if animation cancelled
@@ -177,8 +220,9 @@ export class MediaSequence extends HTMLElement {
       this.activeMedia = this.loadingMedia;
       this.mediaClips.shift();
       this.activeMedia.play();
+      this.playables = [this.activeMedia];
       this.shadow.replaceChildren(this.activeMedia.renderableElement);
-      currentMedia.dispose();
+      currentMedia.cancel();
 
       if (this.mediaClips.length > 1) {
         this.loadingMedia = createMedia(this.mediaClips[1]);
@@ -205,6 +249,7 @@ export class MediaSequence extends HTMLElement {
       this.activeMedia = createMedia(this.mediaClips[0]);
       await this.activeMedia.load();
       this.shadow.replaceChildren(this.activeMedia.renderableElement);
+      this.playables = [this.activeMedia];
 
       this.eventLoop = this.runEventLoop();
     } catch (error) {
