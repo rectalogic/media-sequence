@@ -3,6 +3,7 @@
 
 import createMedia from './MediaFactory.js';
 import { Media } from './Media.js';
+import { Transition } from './Transition.js';
 import {
   MediaInfo,
   TransitionInfo,
@@ -132,26 +133,6 @@ export class MediaSequence extends HTMLElement {
     else this.dispatchEvent(new ErrorEvent(message, { error }));
   }
 
-  private static createTransitionAnimations(
-    element: HTMLElement,
-    transitions: TransitionInfo[],
-    overlap: number,
-  ) {
-    return transitions.map(transition => {
-      const effect = new KeyframeEffect(element, transition.keyframes, {
-        duration: overlap / (transition.iterations || 1),
-        composite: transition.composite,
-        fill: transition.fill,
-        easing: transition.easing,
-        iterations: transition.iterations,
-        iterationComposite: transition.iterationComposite,
-      });
-      const animation = new Animation(effect);
-      animation.pause();
-      return animation;
-    });
-  }
-
   private async runEventLoop() {
     while (this.activeMedia !== undefined) {
       try {
@@ -164,27 +145,17 @@ export class MediaSequence extends HTMLElement {
             this.loadingMedia.renderableElement,
             this.activeMedia.renderableElement,
           );
-          const transitions = [
-            ...MediaSequence.createTransitionAnimations(
-              this.activeMedia.renderableElement,
-              this.activeMedia.mediaInfo.transition.source,
-              this.activeMedia.mediaInfo.transition.overlap,
-            ),
-            ...MediaSequence.createTransitionAnimations(
-              this.loadingMedia.renderableElement,
-              this.activeMedia.mediaInfo.transition.dest,
-              this.activeMedia.mediaInfo.transition.overlap,
-            ),
-          ];
-          this.playables = [
-            this.loadingMedia,
-            this.activeMedia,
-            ...transitions,
-          ];
+          const transition = new Transition(
+            this.activeMedia.renderableElement,
+            this.loadingMedia.renderableElement,
+            this.activeMedia.mediaInfo.transition,
+          );
+
+          this.playables = [this.loadingMedia, this.activeMedia, transition];
           this.play();
 
           // eslint-disable-next-line no-await-in-loop
-          await Promise.all(transitions.map(t => t.finished));
+          await transition.finished;
         }
       } catch (error) {
         // Return if animation cancelled

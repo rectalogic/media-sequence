@@ -41,7 +41,15 @@ const animationDecodeSpec = {
   ),
 };
 
-const transitionInfoDecoder = D.exact(animationDecodeSpec);
+const transitionAnimationInfoDecoder = D.exact(animationDecodeSpec);
+const transitionInfoDecoder = D.exact({
+  overlap: D.number,
+  source: D.array(transitionAnimationInfoDecoder),
+  dest: D.array(transitionAnimationInfoDecoder),
+});
+export type TransitionAnimationInfo = D.DecoderType<
+  typeof transitionAnimationInfoDecoder
+>;
 export type TransitionInfo = D.DecoderType<typeof transitionInfoDecoder>;
 
 const mediaInfoDecoder = D.exact({
@@ -84,13 +92,7 @@ const mediaInfoDecoder = D.exact({
       }),
     ),
   ),
-  transition: D.optional(
-    D.exact({
-      overlap: D.number,
-      source: D.array(transitionInfoDecoder),
-      dest: D.array(transitionInfoDecoder),
-    }),
-  ),
+  transition: D.optional(transitionInfoDecoder),
 });
 
 const mediaInfosDecoder = D.array(mediaInfoDecoder);
