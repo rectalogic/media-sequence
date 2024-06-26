@@ -3,7 +3,11 @@
 
 import createMedia from './MediaFactory.js';
 import { Media } from './Media.js';
-import { MediaClip, Transition, processMediaClipArray } from './MediaClip.js';
+import {
+  MediaInfo,
+  TransitionInfo,
+  processMediaInfoArray,
+} from './Playlist.js';
 
 interface Playable {
   play(): void;
@@ -28,9 +32,9 @@ export class MediaSequence extends HTMLElement {
 
   private loadingMediaPromise?: Promise<unknown>;
 
-  private _playlist?: ReadonlyArray<MediaClip>;
+  private _playlist?: ReadonlyArray<MediaInfo>;
 
-  private mediaClips?: MediaClip[];
+  private mediaInfos?: MediaInfo[];
 
   private eventLoop?: Promise<void>;
 
@@ -66,16 +70,16 @@ export class MediaSequence extends HTMLElement {
     await this.eventLoop;
     this._playlist = undefined;
     this.playables = [];
-    this.mediaClips = undefined;
+    this.mediaInfos = undefined;
     this.activeMedia = undefined;
 
     if (data !== undefined) {
-      this._playlist = processMediaClipArray(data);
+      this._playlist = processMediaInfoArray(data);
       await this.initialize();
     }
   }
 
-  public get playlist(): ReadonlyArray<MediaClip> | undefined {
+  public get playlist(): ReadonlyArray<MediaInfo> | undefined {
     return this._playlist;
   }
 
@@ -108,7 +112,7 @@ export class MediaSequence extends HTMLElement {
   }
 
   public stop() {
-    this.mediaClips = undefined;
+    this.mediaInfos = undefined;
     for (const playable of this.playables) playable.cancel();
     this.playables = [];
     if (this.activeMedia) {
@@ -130,7 +134,7 @@ export class MediaSequence extends HTMLElement {
 
   private static createTransitionAnimations(
     element: HTMLElement,
-    transitions: Transition[],
+    transitions: TransitionInfo[],
     overlap: number,
   ) {
     return transitions.map(transition => {
@@ -153,7 +157,7 @@ export class MediaSequence extends HTMLElement {
       try {
         // eslint-disable-next-line no-await-in-loop
         await this.activeMedia.finished;
-        if (this.loadingMedia && this.activeMedia.mediaClip.transition) {
+        if (this.loadingMedia && this.activeMedia.mediaInfo.transition) {
           // eslint-disable-next-line no-await-in-loop
           await this.loadingMediaPromise;
           this.shadow.insertBefore(
@@ -163,13 +167,13 @@ export class MediaSequence extends HTMLElement {
           const transitions = [
             ...MediaSequence.createTransitionAnimations(
               this.activeMedia.renderableElement,
-              this.activeMedia.mediaClip.transition.source,
-              this.activeMedia.mediaClip.transition.overlap,
+              this.activeMedia.mediaInfo.transition.source,
+              this.activeMedia.mediaInfo.transition.overlap,
             ),
             ...MediaSequence.createTransitionAnimations(
               this.loadingMedia.renderableElement,
-              this.activeMedia.mediaClip.transition.dest,
-              this.activeMedia.mediaClip.transition.overlap,
+              this.activeMedia.mediaInfo.transition.dest,
+              this.activeMedia.mediaInfo.transition.overlap,
             ),
           ];
           this.playables = [
@@ -212,20 +216,20 @@ export class MediaSequence extends HTMLElement {
   }
 
   private async nextMedia() {
-    if (!this.mediaClips || !this.activeMedia) return false;
+    if (!this.mediaInfos || !this.activeMedia) return false;
 
     if (this.loadingMedia) {
       const currentMedia = this.activeMedia;
       await this.loadingMediaPromise;
       this.activeMedia = this.loadingMedia;
-      this.mediaClips.shift();
+      this.mediaInfos.shift();
       this.activeMedia.play();
       this.playables = [this.activeMedia];
       this.shadow.replaceChildren(this.activeMedia.renderableElement);
       currentMedia.cancel();
 
-      if (this.mediaClips.length > 1) {
-        this.loadingMedia = createMedia(this.mediaClips[1]);
+      if (this.mediaInfos.length > 1) {
+        this.loadingMedia = createMedia(this.mediaInfos[1]);
         this.loadingMediaPromise = this.loadingMedia.load();
       } else {
         this.loadingMedia = undefined;
@@ -239,14 +243,14 @@ export class MediaSequence extends HTMLElement {
   private async initialize() {
     if (!this._playlist) return;
     await this.eventLoop;
-    this.mediaClips = [...this._playlist];
+    this.mediaInfos = [...this._playlist];
     try {
-      if (this.mediaClips.length > 1) {
-        this.loadingMedia = createMedia(this.mediaClips[1]);
+      if (this.mediaInfos.length > 1) {
+        this.loadingMedia = createMedia(this.mediaInfos[1]);
         this.loadingMediaPromise = this.loadingMedia.load();
       }
 
-      this.activeMedia = createMedia(this.mediaClips[0]);
+      this.activeMedia = createMedia(this.mediaInfos[0]);
       await this.activeMedia.load();
       this.shadow.replaceChildren(this.activeMedia.renderableElement);
       this.playables = [this.activeMedia];

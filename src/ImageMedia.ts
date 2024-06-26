@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 import { Media } from './Media.js';
-import { MediaClip } from './MediaClip.js';
+import { MediaInfo } from './Playlist.js';
 
 export class ImageMedia extends Media<HTMLImageElement> {
   private static DEFAULT_DURATION = 5000;
 
-  constructor(mediaClip: MediaClip) {
-    super(mediaClip, document.createElement('img'));
+  constructor(mediaInfo: MediaInfo) {
+    super(mediaInfo, document.createElement('img'));
     this.element.loading = 'eager';
     this.element.crossOrigin = 'anonymous';
   }
@@ -22,13 +22,13 @@ export class ImageMedia extends Media<HTMLImageElement> {
     this.element.onload = () => {
       resolve(this);
     };
-    this.element.src = this.mediaClip.src;
+    this.element.src = this.mediaInfo.src;
   }
 
   public get duration() {
-    return this.mediaClip.endTime === undefined
+    return this.mediaInfo.endTime === undefined
       ? ImageMedia.DEFAULT_DURATION
-      : this.mediaClip.endTime - this.mediaClip.startTime;
+      : this.mediaInfo.endTime - this.mediaInfo.startTime;
   }
 
   public play() {

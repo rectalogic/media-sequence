@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 import { Media } from './Media.js';
-import { MediaClip } from './MediaClip.js';
+import { MediaInfo } from './Playlist.js';
 
 export class VideoMedia extends Media<HTMLVideoElement> {
-  constructor(mediaClip: MediaClip) {
-    super(mediaClip, document.createElement('video'));
+  constructor(mediaInfo: MediaInfo) {
+    super(mediaInfo, document.createElement('video'));
     this.element.preload = 'auto';
     this.element.crossOrigin = 'anonymous';
     this.element.disablePictureInPicture = true;
@@ -26,19 +26,19 @@ export class VideoMedia extends Media<HTMLVideoElement> {
 
     // Use media fragments https://www.w3.org/TR/media-frags/
     if (
-      this.mediaClip.startTime !== 0 ||
-      this.mediaClip.endTime !== undefined
+      this.mediaInfo.startTime !== 0 ||
+      this.mediaInfo.endTime !== undefined
     ) {
-      const t = [this.mediaClip.startTime / 1000];
-      if (this.mediaClip.endTime !== undefined) {
-        t.push(this.mediaClip.endTime / 1000);
+      const t = [this.mediaInfo.startTime / 1000];
+      if (this.mediaInfo.endTime !== undefined) {
+        t.push(this.mediaInfo.endTime / 1000);
       }
       this.element.src = new URL(
         `#t=${t.join()}`,
-        this.mediaClip.src,
+        this.mediaInfo.src,
       ).toString();
     } else {
-      this.element.src = this.mediaClip.src;
+      this.element.src = this.mediaInfo.src;
     }
     this.element.load();
   }
@@ -47,9 +47,9 @@ export class VideoMedia extends Media<HTMLVideoElement> {
 
   public get duration() {
     return (
-      (this.mediaClip.endTime === undefined
+      (this.mediaInfo.endTime === undefined
         ? this.element.duration * 1000
-        : this.mediaClip.endTime) - this.mediaClip.startTime
+        : this.mediaInfo.endTime) - this.mediaInfo.startTime
     );
   }
 

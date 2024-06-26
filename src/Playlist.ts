@@ -41,10 +41,10 @@ const animationDecodeSpec = {
   ),
 };
 
-const transitionDecoder = D.exact(animationDecodeSpec);
-export type Transition = D.DecoderType<typeof transitionDecoder>;
+const transitionInfoDecoder = D.exact(animationDecodeSpec);
+export type TransitionInfo = D.DecoderType<typeof transitionInfoDecoder>;
 
-const mediaClipDecoder = D.exact({
+const mediaInfoDecoder = D.exact({
   type: D.either(D.constant('video'), D.constant('image')),
   src: D.string,
   startTime: D.optional(D.number, 0),
@@ -87,16 +87,16 @@ const mediaClipDecoder = D.exact({
   transition: D.optional(
     D.exact({
       overlap: D.number,
-      source: D.array(transitionDecoder),
-      dest: D.array(transitionDecoder),
+      source: D.array(transitionInfoDecoder),
+      dest: D.array(transitionInfoDecoder),
     }),
   ),
 });
 
-const mediaClipsDecoder = D.array(mediaClipDecoder);
+const mediaInfosDecoder = D.array(mediaInfoDecoder);
 
-export type MediaClip = D.DecoderType<typeof mediaClipDecoder>;
+export type MediaInfo = D.DecoderType<typeof mediaInfoDecoder>;
 
-export function processMediaClipArray(mediaClips: unknown): MediaClip[] {
-  return mediaClipsDecoder.verify(mediaClips);
+export function processMediaInfoArray(mediaInfos: unknown): MediaInfo[] {
+  return mediaInfosDecoder.verify(mediaInfos);
 }
