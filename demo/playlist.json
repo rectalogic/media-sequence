@@ -54,30 +54,36 @@
     ],
     "transition": {
       "duration": 1000,
-      "source": [
-        {
-          "keyframes": [
+      "transition": {
+        "source": {
+          "animations": [
             {
-              "transform": "translateX(0%)"
-            },
+              "keyframes": [
+                {
+                  "transform": "translateX(0%)"
+                },
+                {
+                  "transform": "translateX(-100%)"
+                }
+              ]
+            }
+          ]
+        },
+        "dest": {
+          "animations": [
             {
-              "transform": "translateX(-100%)"
+              "keyframes": [
+                {
+                  "transform": "translateX(100%)"
+                },
+                {
+                  "transform": "translateX(0%)"
+                }
+              ]
             }
           ]
         }
-      ],
-      "dest": [
-        {
-          "keyframes": [
-            {
-              "transform": "translateX(100%)"
-            },
-            {
-              "transform": "translateX(0%)"
-            }
-          ]
-        }
-      ]
+      }
     }
   },
   {

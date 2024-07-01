@@ -7,6 +7,7 @@ export class Transition {
   private animations: Animation[];
 
   constructor(
+    duration: number,
     source: HTMLElement,
     dest: HTMLElement,
     transitionInfo: TransitionInfo,
@@ -15,33 +16,33 @@ export class Transition {
       ...Transition.createTransitionAnimations(
         source,
         transitionInfo.source,
-        transitionInfo.duration,
+        duration,
       ),
       ...Transition.createTransitionAnimations(
         dest,
         transitionInfo.dest,
-        transitionInfo.duration,
+        duration,
       ),
     ];
   }
 
   private static createTransitionAnimations(
     element: HTMLElement,
-    transitions: TransitionAnimationInfo[],
+    animationInfo: TransitionAnimationInfo,
     duration: number,
   ) {
-    return transitions.map(transition => {
-      const effect = new KeyframeEffect(element, transition.keyframes, {
-        duration: duration / (transition.iterations || 1),
-        composite: transition.composite,
-        fill: transition.fill,
-        easing: transition.easing,
-        iterations: transition.iterations,
-        iterationComposite: transition.iterationComposite,
+    return animationInfo.animations.map(animation => {
+      const effect = new KeyframeEffect(element, animation.keyframes, {
+        duration: duration / (animation.iterations || 1),
+        composite: animation.composite,
+        fill: animation.fill,
+        easing: animation.easing,
+        iterations: animation.iterations,
+        iterationComposite: animation.iterationComposite,
       });
-      const animation = new Animation(effect);
-      animation.pause();
-      return animation;
+      const anim = new Animation(effect);
+      anim.pause();
+      return anim;
     });
   }
 

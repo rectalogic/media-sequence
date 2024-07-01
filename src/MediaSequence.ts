@@ -4,11 +4,8 @@
 import createMedia from './MediaFactory.js';
 import { Media } from './Media.js';
 import { Transition } from './Transition.js';
-import {
-  MediaInfo,
-  TransitionInfo,
-  processMediaInfoArray,
-} from './Playlist.js';
+import { Transitions } from './Transitions.js';
+import { MediaInfo, processMediaInfoArray } from './Playlist.js';
 
 interface Playable {
   play(): void;
@@ -145,11 +142,26 @@ export class MediaSequence extends HTMLElement {
             this.loadingMedia.renderableElement,
             this.activeMedia.renderableElement,
           );
-          const transition = new Transition(
-            this.activeMedia.renderableElement,
-            this.loadingMedia.renderableElement,
-            this.activeMedia.mediaInfo.transition,
-          );
+          const transitionInfo = this.activeMedia.mediaInfo.transition;
+          let transition;
+          if ('name' in transitionInfo) {
+            if (transitionInfo.name in Transitions) {
+              transition = new Transition(
+                this.activeMedia.mediaInfo.transition.duration,
+                this.activeMedia.renderableElement,
+                this.loadingMedia.renderableElement,
+                Transitions[transitionInfo.name],
+              );
+            }
+            throw new Error('unreachable'); // Validation ensures name is in Transitions
+          } else {
+            transition = new Transition(
+              this.activeMedia.mediaInfo.transition.duration,
+              this.activeMedia.renderableElement,
+              this.loadingMedia.renderableElement,
+              transitionInfo.transition,
+            );
+          }
 
           this.playables = [this.loadingMedia, this.activeMedia, transition];
           this.play();

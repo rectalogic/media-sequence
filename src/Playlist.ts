@@ -2,14 +2,16 @@
 // SPDX-License-Identifier: MIT
 
 import { z } from 'zod';
+import { fromError } from 'zod-validation-error';
 
+const cssValueSchema = z.union([z.string(), z.number()]).nullable().optional();
 const keyframeSchema = z
   .object({
     composite: z.enum(['accumulate', 'add', 'auto', 'replace']).optional(),
     easing: z.string().optional(),
     offset: z.number().nullable().optional(),
   })
-  .catchall(z.union([z.string(), z.number()]).nullable().optional());
+  .catchall(cssValueSchema);
 
 const animationSchema = z.object({
   composite: z.enum(['accumulate', 'add', 'replace']).optional(),
@@ -19,16 +21,22 @@ const animationSchema = z.object({
   iterationComposite: z.enum(['accumulate', 'replace']).optional(),
   keyframes: z.array(keyframeSchema),
 });
+export type AnimationInfo = z.infer<typeof animationSchema>;
 
-const transitionInfoSchema = z
+const transitionAnimationInfo = z
   .object({
-    duration: z.number(),
-    source: z.array(animationSchema.strict()),
-    dest: z.array(animationSchema.strict()),
+    style: z.object({}).catchall(cssValueSchema).optional(),
+    animations: z.array(animationSchema.strict()),
   })
   .strict();
 
-export type TransitionAnimationInfo = z.infer<typeof animationSchema>;
+export type TransitionAnimationInfo = z.infer<typeof transitionAnimationInfo>;
+
+const transitionInfoSchema = z.object({
+  source: transitionAnimationInfo,
+  dest: transitionAnimationInfo,
+});
+
 export type TransitionInfo = z.infer<typeof transitionInfoSchema>;
 
 const transformSchema = z
@@ -69,7 +77,19 @@ const mediaInfoSchema = z.object({
         .strict(),
     )
     .optional(),
-  transition: transitionInfoSchema.optional(),
+  transition: z
+    .union([
+      z
+        .object({
+          duration: z.number(),
+          name: z.string(),
+        })
+        .strict(),
+      z
+        .object({ duration: z.number(), transition: transitionInfoSchema })
+        .strict(),
+    ])
+    .optional(),
 });
 
 const mediaInfosDecoder = z.array(mediaInfoSchema);
@@ -77,5 +97,9 @@ const mediaInfosDecoder = z.array(mediaInfoSchema);
 export type MediaInfo = z.infer<typeof mediaInfoSchema>;
 
 export function processMediaInfoArray(mediaInfos: unknown): MediaInfo[] {
-  return mediaInfosDecoder.parse(mediaInfos);
+  try {
+    return mediaInfosDecoder.parse(mediaInfos);
+  } catch (error) {
+    throw fromError(error);
+  }
 }
