@@ -87,7 +87,7 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
   protected configureAnimations() {
     if (this.disposed) return;
 
-    const overlap = this.mediaInfo.transition?.overlap || 0;
+    const overlap = this.mediaInfo.transition?.duration || 0;
     // No-op animation that provides our master clock
     this._mediaClock.effect?.updateTiming({
       delay: this.mediaInfo.startTime,

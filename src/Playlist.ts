@@ -43,7 +43,7 @@ const animationDecodeSpec = {
 
 const transitionAnimationInfoDecoder = D.exact(animationDecodeSpec);
 const transitionInfoDecoder = D.exact({
-  overlap: D.number,
+  duration: D.number,
   source: D.array(transitionAnimationInfoDecoder),
   dest: D.array(transitionAnimationInfoDecoder),
 });

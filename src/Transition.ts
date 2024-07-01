@@ -15,12 +15,12 @@ export class Transition {
       ...Transition.createTransitionAnimations(
         source,
         transitionInfo.source,
-        transitionInfo.overlap,
+        transitionInfo.duration,
       ),
       ...Transition.createTransitionAnimations(
         dest,
         transitionInfo.dest,
-        transitionInfo.overlap,
+        transitionInfo.duration,
       ),
     ];
   }
@@ -28,11 +28,11 @@ export class Transition {
   private static createTransitionAnimations(
     element: HTMLElement,
     transitions: TransitionAnimationInfo[],
-    overlap: number,
+    duration: number,
   ) {
     return transitions.map(transition => {
       const effect = new KeyframeEffect(element, transition.keyframes, {
-        duration: overlap / (transition.iterations || 1),
+        duration: duration / (transition.iterations || 1),
         composite: transition.composite,
         fill: transition.fill,
         easing: transition.easing,

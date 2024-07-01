@@ -53,7 +53,7 @@
       }
     ],
     "transition": {
-      "overlap": 1000,
+      "duration": 1000,
       "source": [
         {
           "keyframes": [
