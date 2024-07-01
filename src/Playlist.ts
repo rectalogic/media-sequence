@@ -1,104 +1,81 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
-import * as D from 'decoders';
+import { z } from 'zod';
 
-const animationDecodeSpec = {
-  composite: D.optional(
-    D.either(
-      D.constant('accumulate'),
-      D.constant('add'),
-      D.constant('replace'),
-    ),
-  ),
-  fill: D.optional(
-    D.either(
-      D.constant('auto'),
-      D.constant('backwards'),
-      D.constant('both'),
-      D.constant('forwards'),
-      D.constant('none'),
-    ),
-  ),
-  easing: D.optional(D.string),
-  iterations: D.optional(D.number),
-  iterationComposite: D.optional(
-    D.either(D.constant('accumulate'), D.constant('replace')),
-  ),
-  keyframes: D.array(
-    D.inexact({
-      composite: D.optional(
-        D.either(
-          D.constant('accumulate'),
-          D.constant('add'),
-          D.constant('auto'),
-          D.constant('replace'),
-        ),
-      ),
-      easing: D.optional(D.string),
-      offset: D.optional(D.nullable(D.number)),
-    }).pipe(D.record(D.optional(D.either(D.string, D.number, D.null_)))),
-  ),
-};
+const keyframeSchema = z
+  .object({
+    composite: z.enum(['accumulate', 'add', 'auto', 'replace']).optional(),
+    easing: z.string().optional(),
+    offset: z.number().nullable().optional(),
+  })
+  .catchall(z.union([z.string(), z.number()]).nullable().optional());
 
-const transitionAnimationInfoDecoder = D.exact(animationDecodeSpec);
-const transitionInfoDecoder = D.exact({
-  duration: D.number,
-  source: D.array(transitionAnimationInfoDecoder),
-  dest: D.array(transitionAnimationInfoDecoder),
-});
-export type TransitionAnimationInfo = D.DecoderType<
-  typeof transitionAnimationInfoDecoder
->;
-export type TransitionInfo = D.DecoderType<typeof transitionInfoDecoder>;
-
-const mediaInfoDecoder = D.exact({
-  type: D.either(D.constant('video'), D.constant('image')),
-  src: D.string,
-  startTime: D.optional(D.number, 0),
-  endTime: D.optional(D.number),
-  objectFit: D.optional(
-    D.either(
-      D.constant('fill'),
-      D.constant('contain'),
-      D.constant('cover'),
-      D.constant('none'),
-      D.constant('scale-down'),
-    ),
-    'contain',
-  ),
-  transform: D.optional(
-    D.exact({
-      startOffset: D.optional(D.number),
-      endOffset: D.optional(D.number),
-      keyframes: D.array(
-        D.exact({
-          easing: D.optional(D.string),
-          offset: D.optional(D.number),
-          scale: D.optional(D.number),
-          rotate: D.optional(D.number),
-          translateX: D.optional(D.number),
-          translateY: D.optional(D.number),
-        }),
-      ),
-    }),
-  ),
-  animations: D.optional(
-    D.array(
-      D.exact({
-        startOffset: D.optional(D.number),
-        endOffset: D.optional(D.number),
-        ...animationDecodeSpec,
-      }),
-    ),
-  ),
-  transition: D.optional(transitionInfoDecoder),
+const animationSchema = z.object({
+  composite: z.enum(['accumulate', 'add', 'replace']).optional(),
+  fill: z.enum(['auto', 'backwards', 'both', 'forwards', 'none']).optional(),
+  easing: z.string().optional(),
+  iterations: z.number().optional(),
+  iterationComposite: z.enum(['accumulate', 'replace']).optional(),
+  keyframes: z.array(keyframeSchema),
 });
 
-const mediaInfosDecoder = D.array(mediaInfoDecoder);
+const transitionInfoSchema = z
+  .object({
+    duration: z.number(),
+    source: z.array(animationSchema.strict()),
+    dest: z.array(animationSchema.strict()),
+  })
+  .strict();
 
-export type MediaInfo = D.DecoderType<typeof mediaInfoDecoder>;
+export type TransitionAnimationInfo = z.infer<typeof animationSchema>;
+export type TransitionInfo = z.infer<typeof transitionInfoSchema>;
+
+const transformSchema = z
+  .object({
+    startOffset: z.number().optional(),
+    endOffset: z.number().optional(),
+    keyframes: z.array(
+      z
+        .object({
+          easing: z.string().optional(),
+          offset: z.number().optional(),
+          scale: z.number().optional(),
+          rotate: z.number().optional(),
+          translateX: z.number().optional(),
+          translateY: z.number().optional(),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+
+const mediaInfoSchema = z.object({
+  type: z.enum(['video', 'image']),
+  src: z.string(),
+  startTime: z.number().default(0),
+  endTime: z.number().optional(),
+  objectFit: z
+    .enum(['fill', 'contain', 'cover', 'none', 'scale-down'])
+    .default('contain'),
+  transform: transformSchema.optional(),
+  animations: z
+    .array(
+      animationSchema
+        .extend({
+          startOffset: z.number().optional(),
+          endOffset: z.number().optional(),
+        })
+        .strict(),
+    )
+    .optional(),
+  transition: transitionInfoSchema.optional(),
+});
+
+const mediaInfosDecoder = z.array(mediaInfoSchema);
+
+export type MediaInfo = z.infer<typeof mediaInfoSchema>;
 
 export function processMediaInfoArray(mediaInfos: unknown): MediaInfo[] {
-  return mediaInfosDecoder.verify(mediaInfos);
+  return mediaInfosDecoder.parse(mediaInfos);
 }
