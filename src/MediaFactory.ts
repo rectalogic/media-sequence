@@ -1,7 +1,7 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
-import { MediaInfo } from './Playlist.js';
+import { MediaInfo } from './schema/index.js';
 import { VideoMedia } from './VideoMedia.js';
 import { ImageMedia } from './ImageMedia.js';
 

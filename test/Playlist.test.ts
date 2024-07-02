@@ -1,7 +1,7 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 import { expect } from '@open-wc/testing';
-import { processMediaInfoArray } from '../src/Playlist.js';
+import { processMediaInfoArray } from '../src/schema/index.js';
 
 describe('MediaInfo', () => {
   it('rejects bad MediaInfo', () => {

@@ -1,7 +1,7 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
-import { MediaInfo } from './Playlist.js';
+import { MediaInfo } from './schema/index.js';
 
 // XXX will need to handle the case where we are transitioning video and video/image and one of them stalls/buffers - need to pause the other so they stay in sync?
 

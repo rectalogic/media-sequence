@@ -3,41 +3,9 @@
 
 import { z } from 'zod';
 import { fromError } from 'zod-validation-error';
-
-const cssValueSchema = z.union([z.string(), z.number()]).nullable().optional();
-const keyframeSchema = z
-  .object({
-    composite: z.enum(['accumulate', 'add', 'auto', 'replace']).optional(),
-    easing: z.string().optional(),
-    offset: z.number().nullable().optional(),
-  })
-  .catchall(cssValueSchema);
-
-const animationSchema = z.object({
-  composite: z.enum(['accumulate', 'add', 'replace']).optional(),
-  fill: z.enum(['auto', 'backwards', 'both', 'forwards', 'none']).optional(),
-  easing: z.string().optional(),
-  iterations: z.number().optional(),
-  iterationComposite: z.enum(['accumulate', 'replace']).optional(),
-  keyframes: z.array(keyframeSchema),
-});
-export type AnimationInfo = z.infer<typeof animationSchema>;
-
-const transitionAnimationInfo = z
-  .object({
-    style: z.object({}).catchall(cssValueSchema).optional(),
-    animations: z.array(animationSchema.strict()),
-  })
-  .strict();
-
-export type TransitionAnimationInfo = z.infer<typeof transitionAnimationInfo>;
-
-const transitionInfoSchema = z.object({
-  source: transitionAnimationInfo,
-  dest: transitionAnimationInfo,
-});
-
-export type TransitionInfo = z.infer<typeof transitionInfoSchema>;
+import { animationSchema } from './Animation.js';
+import { transitionInfoSchema } from './Transition.js';
+import { Transitions } from '../Transitions.js';
 
 const transformSchema = z
   .object({
@@ -82,7 +50,9 @@ const mediaInfoSchema = z.object({
       z
         .object({
           duration: z.number(),
-          name: z.string(),
+          name: z.string().refine(name => name in Transitions, {
+            message: 'Invalid transition name',
+          }),
         })
         .strict(),
       z

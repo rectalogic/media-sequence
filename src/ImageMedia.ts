@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Media } from './Media.js';
-import { MediaInfo } from './Playlist.js';
+import { MediaInfo } from './schema/index.js';
 
 export class ImageMedia extends Media<HTMLImageElement> {
   private static DEFAULT_DURATION = 5000;

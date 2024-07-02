@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Media } from './Media.js';
-import { MediaInfo } from './Playlist.js';
+import { MediaInfo } from './schema/index.js';
 
 export class VideoMedia extends Media<HTMLVideoElement> {
   constructor(mediaInfo: MediaInfo) {

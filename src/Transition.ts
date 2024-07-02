@@ -1,7 +1,7 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
-import { TransitionInfo, TransitionAnimationInfo } from './Playlist.js';
+import { TransitionInfo, TransitionAnimationInfo } from './schema/index.js';
 
 export class Transition {
   private animations: Animation[];
@@ -24,6 +24,7 @@ export class Transition {
         duration,
       ),
     ];
+    // source.style
   }
 
   private static createTransitionAnimations(

@@ -5,7 +5,7 @@ import createMedia from './MediaFactory.js';
 import { Media } from './Media.js';
 import { Transition } from './Transition.js';
 import { Transitions } from './Transitions.js';
-import { MediaInfo, processMediaInfoArray } from './Playlist.js';
+import { MediaInfo, processMediaInfoArray } from './schema/index.js';
 
 interface Playable {
   play(): void;
