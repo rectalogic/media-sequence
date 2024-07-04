@@ -3,10 +3,7 @@
 
 import { z } from 'zod';
 
-export const cssValueSchema = z
-  .union([z.string(), z.number()])
-  .nullable()
-  .optional();
+const cssValueSchema = z.union([z.string(), z.number()]).nullable().optional();
 const keyframeSchema = z
   .object({
     composite: z.enum(['accumulate', 'add', 'auto', 'replace']).optional(),

@@ -3,18 +3,22 @@
 
 import { TransitionInfo } from './schema/index.js';
 
-export const Transitions: Record<string, TransitionInfo> = Object.freeze({
+interface TransitionsMap {
+  [key: string]: TransitionInfo;
+}
+
+export const Transitions: TransitionsMap = {
   crossFade: {
-    source: { animations: [{ keyframes: [{ opacity: 1 }, { opacity: 0 }] }] },
+    source: {
+      style: { 'mix-blend-mode': 'plus-lighter' },
+      animations: [{ keyframes: [{ opacity: 1 }, { opacity: 0 }] }],
+    },
     dest: {
       animations: [
         {
-          keyframes: [
-            { opacity: 0, 'mix-blend-mode': 'plus-lighter' },
-            { opacity: 1, 'mix-blend-mode': 'plus-lighter' },
-          ],
+          keyframes: [{ opacity: 0 }, { opacity: 1 }],
         },
       ],
     },
   },
-});
+} as const;

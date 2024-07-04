@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 import { z } from 'zod';
-import { cssValueSchema, animationSchema } from './Animation.js';
+import { animationSchema } from './Animation.js';
 
 const transitionAnimationInfo = z
   .object({
-    style: z.object({}).catchall(cssValueSchema).optional(),
+    style: z.object({}).catchall(z.string().nullable()).optional(),
     animations: z.array(animationSchema.strict()),
   })
   .strict();

@@ -15,7 +15,11 @@
           { "transform": "translateY(0px)" }
         ]
       }
-    ]
+    ],
+    "transition": {
+      "duration": 1000,
+      "name": "crossFade"
+    }
   },
   {
     "type": "video",

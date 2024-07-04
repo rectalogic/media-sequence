@@ -90,12 +90,11 @@ export class MediaSequence extends HTMLElement {
       }
       :host {
         display: inline-grid;
-        grid-template-areas: "media";
         width: ${width !== null ? `${width}px` : 'auto'};
         height: ${height !== null ? `${height}px` : 'auto'};
       }
       .media {
-        grid-area: media;
+        grid-area: 1 / 1;
         overflow: hidden;
       }
     `);
@@ -152,8 +151,7 @@ export class MediaSequence extends HTMLElement {
                 this.loadingMedia.renderableElement,
                 Transitions[transitionInfo.name],
               );
-            }
-            throw new Error('unreachable'); // Validation ensures name is in Transitions
+            } else throw new Error('unreachable'); // Validation ensures name is in Transitions
           } else {
             transition = new Transition(
               this.activeMedia.mediaInfo.transition.duration,
