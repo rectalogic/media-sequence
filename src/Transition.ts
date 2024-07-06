@@ -41,21 +41,23 @@ export class Transition {
       }
       this.elementStyles.push({ element, styles });
     }
-    this.animations.push(
-      ...animationInfo.animations.map(animation => {
-        const effect = new KeyframeEffect(element, animation.keyframes, {
-          duration: duration / (animation.iterations || 1),
-          composite: animation.composite,
-          fill: animation.fill,
-          easing: animation.easing,
-          iterations: animation.iterations,
-          iterationComposite: animation.iterationComposite,
-        });
-        const anim = new Animation(effect);
-        anim.pause();
-        return anim;
-      }),
-    );
+    if (animationInfo.animations) {
+      this.animations.push(
+        ...animationInfo.animations.map(animation => {
+          const effect = new KeyframeEffect(element, animation.keyframes, {
+            duration: duration / (animation.iterations || 1),
+            composite: animation.composite,
+            fill: animation.fill,
+            easing: animation.easing,
+            iterations: animation.iterations,
+            iterationComposite: animation.iterationComposite,
+          });
+          const anim = new Animation(effect);
+          anim.pause();
+          return anim;
+        }),
+      );
+    }
   }
 
   private resetStyles() {

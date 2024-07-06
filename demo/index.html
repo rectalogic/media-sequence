@@ -9,12 +9,10 @@
     </style>
     <script src="../dist/src/media-sequence.js" type="module"></script>
     <script>
-      window.onload = async () => {
+      const updatePlaylist = async () => {
+        const select = document.querySelector('#playlist');
         const ms = document.querySelector('#sequence');
-        ms.addEventListener('error', event =>
-          console.error(`${event.message} ${event.error}`),
-        );
-        const response = await fetch('playlist.json');
+        const response = await fetch(select.value);
         if (response.ok) {
           try {
             const json = await response.json();
@@ -25,6 +23,13 @@
         } else {
           console.error(response);
         }
+      };
+      window.onload = async () => {
+        const ms = document.querySelector('#sequence');
+        ms.addEventListener('error', event =>
+          console.error(`${event.message} ${event.error}`),
+        );
+        updatePlaylist();
       };
     </script>
   </head>
@@ -39,6 +44,12 @@
     <p>
       <button onclick="sequence.play()">Play</button>
       <button onclick="sequence.pause()">Pause</button>
+    </p>
+    <p>
+      <select id="playlist" onchange="updatePlaylist()">
+        <option value="playlist.json">playlist.json</option>
+        <option value="transitions.json">transitions.json</option>
+      </select>
     </p>
   </body>
 </html>

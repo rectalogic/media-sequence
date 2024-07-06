@@ -7,7 +7,7 @@ import { animationSchema } from './Animation.js';
 const transitionAnimationInfo = z
   .object({
     style: z.object({}).catchall(z.string().nullable()).optional(),
-    animations: z.array(animationSchema.strict()),
+    animations: z.array(animationSchema.strict()).optional(),
   })
   .strict();
 
