@@ -28,7 +28,7 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
     this._container.className = 'media';
     this._container.appendChild(element);
 
-    this._mediaClock = new Animation(new KeyframeEffect(null, null));
+    this._mediaClock = new Animation(new KeyframeEffect(element, null));
   }
 
   public load() {
