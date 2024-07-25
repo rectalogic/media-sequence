@@ -1,15 +1,15 @@
 {
-  "name": "media-sequence",
-  "description": "Webcomponent media-sequence following open-wc recommendations",
+  "name": "mediafx",
+  "description": "Webcomponent media-fx following open-wc recommendations",
   "license": "MIT",
-  "author": "media-sequence",
+  "author": "rectalogic@rectalogic.com",
   "version": "0.0.0",
   "type": "module",
   "main": "dist/src/index.js",
   "module": "dist/src/index.js",
   "exports": {
     ".": "./dist/src/index.js",
-    "./media-sequence.js": "./dist/src/media-sequence.js"
+    "./media-fx.js": "./dist/src/media-fx.js"
   },
   "scripts": {
     "analyze": "cem analyze",

@@ -13,7 +13,7 @@ interface Playable {
   cancel(): void;
 }
 
-export class MediaSequence extends HTMLElement {
+export class MediaFX extends HTMLElement {
   static get observedAttributes(): string[] {
     return ['width', 'height'];
   }
@@ -45,7 +45,7 @@ export class MediaSequence extends HTMLElement {
   }
 
   public connectedCallback() {
-    console.log('Custom media-sequence element added to page.');
+    console.log('Custom media-fx element added to page.');
   }
 
   public attributeChangedCallback(
@@ -53,7 +53,7 @@ export class MediaSequence extends HTMLElement {
     _oldValue: string,
     _newValue: string,
   ) {
-    console.log(`Custom media-sequence attributeChangedCallback ${attr}`);
+    console.log(`Custom media-fx attributeChangedCallback ${attr}`);
     switch (attr) {
       case 'width':
       case 'height':

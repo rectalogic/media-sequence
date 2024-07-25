@@ -7,7 +7,7 @@
         background: #fafafa;
       }
     </style>
-    <script src="../dist/src/media-sequence.js" type="module"></script>
+    <script src="../dist/src/media-fx.js" type="module"></script>
     <script>
       const updatePlaylist = async () => {
         const select = document.querySelector('#playlist');
@@ -34,13 +34,13 @@
     </script>
   </head>
   <body>
-    <media-sequence
+    <media-fx
       id="sequence"
       width="640"
       height="360"
       style="background-color: #f00; isolation: isolate"
     >
-    </media-sequence>
+    </media-fx>
     <p>
       <button onclick="sequence.play()">Play</button>
       <button onclick="sequence.pause()">Pause</button>
