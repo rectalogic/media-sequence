@@ -13,7 +13,7 @@ interface Playable {
   cancel(): void;
 }
 
-export class MediaFX extends HTMLElement {
+export class MediaFXSequence extends HTMLElement {
   static get observedAttributes(): string[] {
     return ['width', 'height'];
   }

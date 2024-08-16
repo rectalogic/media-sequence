@@ -4,7 +4,7 @@
 import { Media } from './Media.js';
 import { MediaInfo } from './schema/index.js';
 
-export class ImageMedia extends Media<HTMLImageElement> {
+export class MediaFXImage extends Media {
   private static DEFAULT_DURATION = 5000;
 
   constructor(mediaInfo: MediaInfo) {
@@ -27,7 +27,7 @@ export class ImageMedia extends Media<HTMLImageElement> {
 
   public get duration() {
     return this.mediaInfo.endTime === undefined
-      ? ImageMedia.DEFAULT_DURATION
+      ? MediaFXImage.DEFAULT_DURATION
       : this.mediaInfo.endTime - this.mediaInfo.startTime;
   }
 

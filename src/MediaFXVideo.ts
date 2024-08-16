@@ -4,7 +4,7 @@
 import { Media } from './Media.js';
 import { MediaInfo } from './schema/index.js';
 
-export class VideoMedia extends Media<HTMLVideoElement> {
+export class MediaFXVideo extends Media {
   constructor(mediaInfo: MediaInfo) {
     super(mediaInfo, document.createElement('video'));
     this.element.preload = 'auto';

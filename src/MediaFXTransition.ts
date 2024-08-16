@@ -12,7 +12,7 @@ interface ElementStyles {
   styles: Styles;
 }
 
-export class Transition {
+export class MediaFXTransition extends HTMLElement {
   private elementStyles: ElementStyles[] = [];
 
   private animations: Animation[] = [];

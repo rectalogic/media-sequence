@@ -1,11 +1,30 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
-import { MediaInfo } from './schema/index.js';
-
 // XXX will need to handle the case where we are transitioning video and video/image and one of them stalls/buffers - need to pause the other so they stay in sync?
 
-export abstract class Media<E extends HTMLElement = HTMLElement> {
+const template = document.createElement('template');
+template.innerHTML = `
+  <style>
+    :host {
+      display: block;
+    }
+    img, video {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+  <slot></slot>`;
+
+export abstract class Media extends HTMLElement {
+  static get observedAttributes(): string[] {
+    return ['object-position', 'object-fit'];
+  }
+
+  private objectPosition?: string;
+
+  private objectFit?: string;
+
   private _mediaClock: Animation;
 
   private _element: E;
@@ -19,6 +38,10 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
   private _disposed: boolean = false;
 
   constructor(mediaInfo: MediaInfo, element: E) {
+    super();
+    this.shadow = this.attachShadow({ mode: 'open' });
+    this.shadow.appendChild(template.content.cloneNode(true));
+
     this._element = element;
     this._element.style.width = '100%';
     this._element.style.height = '100%';
@@ -31,11 +54,33 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
     this._mediaClock = new Animation(new KeyframeEffect(element, null));
   }
 
+  public connectedCallback() {
+    console.log('Custom media-fx element added to page.');
+    // XXX find mediafx-effect elements - could defer this to when we load the media
+  }
+
+  public attributeChangedCallback(
+    attr: string,
+    _oldValue: string,
+    newValue: string,
+  ) {
+    //XXX update active element if we have one
+    switch (attr) {
+      case 'object-position':
+        this.objectPosition = newValue;
+        break;
+      case 'object-fit':
+        this.objectFit = newValue;
+        break;
+      default:
+    }
+  }
+
   public load() {
     return new Promise((resolve, reject) => {
       const handleResolve = (value: unknown) => {
         try {
-          this.configureAnimations();
+          this.configureEffects();
           resolve(value);
         } catch (error) {
           reject(error);
@@ -51,10 +96,7 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
   ): void;
 
   // Positive offset is from startTime, negative is from endTime
-  private computeAnimationDelayDuration(
-    startOffset?: number,
-    endOffset?: number,
-  ) {
+  private computeEffectDelayDuration(startOffset?: number, endOffset?: number) {
     let startTime;
     if (startOffset === undefined) startTime = this.mediaInfo.startTime;
     else if (startOffset >= 0)
@@ -84,7 +126,7 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
     };
   }
 
-  protected configureAnimations() {
+  protected configureEffects() {
     if (this.disposed) return;
 
     const overlap = this.mediaInfo.transition?.duration || 0;
@@ -107,7 +149,7 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
       }));
 
       const effect = new KeyframeEffect(this.element, keyframes, {
-        ...this.computeAnimationDelayDuration(
+        ...this.computeEffectDelayDuration(
           this.mediaInfo.transform.startOffset,
           this.mediaInfo.transform.endOffset,
         ),
@@ -121,7 +163,7 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
 
     if (this.mediaInfo.animations) {
       for (const animation of this.mediaInfo.animations) {
-        const timing = this.computeAnimationDelayDuration(
+        const timing = this.computeEffectDelayDuration(
           animation.startOffset,
           animation.endOffset,
         );

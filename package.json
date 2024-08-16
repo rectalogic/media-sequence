@@ -1,6 +1,6 @@
 {
   "name": "mediafx",
-  "description": "Webcomponent media-fx following open-wc recommendations",
+  "description": "mediafx custom web elements following open-wc recommendations",
   "license": "MIT",
   "author": "rectalogic@rectalogic.com",
   "version": "0.0.0",
@@ -9,7 +9,12 @@
   "module": "dist/src/index.js",
   "exports": {
     ".": "./dist/src/index.js",
-    "./media-fx.js": "./dist/src/media-fx.js"
+    "./mediafx-sequence.js": "./dist/src/mediafx-sequence.js",
+    "./mediafx-video.js": "./dist/src/mediafx-video.js",
+    "./mediafx-image.js": "./dist/src/mediafx-image.js",
+    "./mediafx-effect.js": "./dist/src/mediafx-effect.js",
+    "./mediafx-transform.js": "./dist/src/mediafx-transform.js",
+    "./mediafx-transition.js": "./dist/src/mediafx-transition.js"
   },
   "scripts": {
     "analyze": "cem analyze",
