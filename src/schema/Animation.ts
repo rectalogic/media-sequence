@@ -18,6 +18,7 @@ export const animationSchema = z.object({
   easing: z.string().optional(),
   iterations: z.number().optional(),
   iterationComposite: z.enum(['accumulate', 'replace']).optional(),
+  pseudoElement: z.string().nullable().optional(),
   keyframes: z.array(keyframeSchema),
 });
 export type AnimationInfo = z.infer<typeof animationSchema>;

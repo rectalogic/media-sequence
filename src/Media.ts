@@ -139,6 +139,7 @@ export abstract class Media<E extends HTMLElement = HTMLElement> {
             easing: animation.easing,
             iterations: animation.iterations,
             iterationComposite: animation.iterationComposite,
+            pseudoElement: animation.pseudoElement,
           },
         );
         const anim = new Animation(effect);

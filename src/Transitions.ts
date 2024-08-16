@@ -87,6 +87,33 @@ export const Transitions: TransitionsMap = {
   get wipeBottom() {
     return buildTransition(undefined, wipe('bottom'));
   },
+  get wipeFadeLeft() {
+    //XXX we can't style pseudo element from JS via the element - add a way to insert additional html?
+    //XXX or can we add the gradient as a background-image?
+    // XXX just use mask-image and linear-gradient, and css variables in the gradient?
+    return {
+      source: {
+        style: { 'mix-blend-mode': 'plus-lighter' },
+        animations: [{ keyframes: [{ opacity: 1 }, { opacity: 0 }] }],
+      },
+      dest: {
+        animations: [
+          {
+            keyframes: [{ opacity: 0 }, { opacity: 1 }],
+          },
+        ],
+      },
+    };
+    //   .element:before {
+    //     content: '';
+    //     position: absolute;
+    //     top: 0;
+    //     right: 0;
+    //     left: 0;
+    //     height: 100%;
+    //     background-image: linear-gradient(90deg, #000 0%, #fff 100%);
+    // }
+  },
   get bounceLeft() {
     return buildTransition(animations.bounceOutLeft, animations.bounceInRight);
   },
