@@ -1,91 +1,99 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
-import { TransitionInfo, TransitionAnimationInfo } from './schema/index.js';
+// XXX need <mediafx-json> child and optional <mediafx-style> which is just the styles with no selector, and use ::slotted(.source)/::slotted(.dest) as selectors
+// XXX hmm, use <mediafx-target type="source">/<mediafx-target type="dest"> to contain the above
+// XXX need to support canned transitions too
+//XXX make <mediafx-json> support src attribute and load the json - use in Effect too
 
-interface Styles {
-  [key: string]: string | null;
-}
+import { fromError } from 'zod-validation-error';
+import { effectSchema, EffectInfo } from './schema/Effect.js';
+import MediaFXContent from './MediaFXContent.js';
 
-interface ElementStyles {
-  element: HTMLElement;
-  styles: Styles;
-}
+type TargetType = 'source' | 'dest';
+type TransitionInfo = {
+  style?: CSSStyleSheet;
+  effect?: EffectInfo & { options: { duration: number } };
+};
+
+const template = document.createElement('template');
+template.innerHTML = `
+  <style>
+    :host { display: none; }
+  </style>
+  <slot></slot>`;
 
 export class MediaFXTransition extends HTMLElement {
-  private elementStyles: ElementStyles[] = [];
+  private _duration: number = 0;
 
-  private animations: Animation[] = [];
-
-  constructor(
-    duration: number,
-    source: HTMLElement,
-    dest: HTMLElement,
-    transitionInfo: TransitionInfo,
-  ) {
-    this.createTransitionAnimations(source, transitionInfo.source, duration);
-    this.createTransitionAnimations(dest, transitionInfo.dest, duration);
+  static get observedAttributes(): string[] {
+    return ['duration'];
   }
 
-  private createTransitionAnimations(
-    element: HTMLElement,
-    animationInfo: TransitionAnimationInfo,
-    duration: number,
-  ) {
-    if (animationInfo.style) {
-      const styles: Styles = {};
-      const { style } = element;
-      for (const [key, value] of Object.entries(animationInfo.style)) {
-        styles[key] = style.getPropertyValue(key);
-        style.setProperty(key, value);
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this.shadowRoot?.appendChild(template.content.cloneNode(true));
+  }
+
+  private findTarget(targetType: TargetType) {
+    return this.shadowRoot?.querySelector(
+      `:scope > mediafx-target[type="${targetType}"`,
+    );
+  }
+
+  public async targetEffect(
+    targetType: TargetType,
+  ): Promise<TransitionInfo | null> {
+    try {
+      const target = this.findTarget(targetType);
+      if (target) {
+        const targetJson = await target
+          .querySelector<MediaFXContent>(
+            ':scope > mediafx-content[type="application/json"]',
+          )
+          ?.content();
+        const targetStyle = await target
+          .querySelector<MediaFXContent>(
+            ':scope > mediafx-content[type="text/css"]',
+          )
+          ?.content();
+        const result: TransitionInfo = {};
+        if (targetJson) {
+          const effect = effectSchema.parse(targetJson);
+          const options = {
+            ...effect.options,
+            duration: this.duration / (effect.options?.iterations || 1),
+          };
+          result.effect = { keyframes: effect.keyframes, options };
+        }
+        if (targetStyle) {
+          const sheet = new CSSStyleSheet();
+          sheet.insertRule(`::slotted(.${targetType}) { ${targetStyle} }`);
+          result.style = sheet;
+        }
+        return result;
       }
-      this.elementStyles.push({ element, styles });
-    }
-    if (animationInfo.animations) {
-      this.animations.push(
-        ...animationInfo.animations.map(animation => {
-          const effect = new KeyframeEffect(element, animation.keyframes, {
-            duration: duration / (animation.iterations || 1),
-            composite: animation.composite,
-            fill: animation.fill,
-            easing: animation.easing,
-            iterations: animation.iterations,
-            iterationComposite: animation.iterationComposite,
-          });
-          const anim = new Animation(effect);
-          anim.pause();
-          return anim;
-        }),
-      );
+      return null;
+    } catch (error) {
+      throw fromError(error);
     }
   }
 
-  private resetStyles() {
-    this.elementStyles.forEach(es => {
-      for (const [key, value] of Object.entries(es.styles)) {
-        es.element.style.setProperty(key, value);
-      }
-    });
+  public get duration(): number {
+    return this._duration;
   }
 
-  private async awaitFinished() {
-    await Promise.all(this.animations.map(a => a.finished));
-    this.resetStyles();
-  }
-
-  public get finished() {
-    return this.awaitFinished();
-  }
-
-  public play() {
-    for (const animation of this.animations) animation.play();
-  }
-
-  public pause() {
-    for (const animation of this.animations) animation.pause();
-  }
-
-  public cancel() {
-    for (const animation of this.animations) animation.cancel();
+  public attributeChangedCallback(
+    attr: string,
+    _oldValue: string,
+    newValue: string,
+  ) {
+    switch (attr) {
+      case 'duration':
+        this._duration = parseFloat(newValue);
+        break;
+      default:
+    }
   }
 }

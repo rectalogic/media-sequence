@@ -7,9 +7,9 @@ import { EffectInfo } from './schema/Effect.js';
 import { transformSchema } from './schema/Transform.js';
 
 export default class MediaFXTransform extends MediaFXEffect {
-  public override get effectInfo(): EffectInfo {
+  public override async effectInfo(): Promise<EffectInfo> {
     try {
-      const transform = transformSchema.parse(this.textContent);
+      const transform = transformSchema.parse(await this.effectContent);
       return {
         keyframes: transform.keyframes.map(kf => ({
           offset: kf.offset,

@@ -3,9 +3,14 @@
 
 import { fromError } from 'zod-validation-error';
 import { effectSchema, EffectInfo } from './schema/Effect.js';
+import MediaFXContent from './MediaFXContent.js';
 
 const template = document.createElement('template');
-template.innerHTML = '<slot></slot>';
+template.innerHTML = `
+  <style>
+    :host { display: none; }
+  </style>
+  <slot></slot>`;
 
 export default class MediaFXEffect extends HTMLElement {
   private _startOffset?: number;
@@ -22,9 +27,16 @@ export default class MediaFXEffect extends HTMLElement {
     this.shadowRoot?.appendChild(template.content.cloneNode(true));
   }
 
-  public get effectInfo(): EffectInfo {
+  protected async effectContent() {
+    const content = this.querySelector<MediaFXContent>(
+      ':scope > mediafx-content[type="application/json"',
+    );
+    return content?.textContent;
+  }
+
+  public async effectInfo(): Promise<EffectInfo> {
     try {
-      return effectSchema.parse(this.textContent);
+      return effectSchema.parse(await this.effectContent());
     } catch (error) {
       throw fromError(error);
     }
@@ -44,10 +56,10 @@ export default class MediaFXEffect extends HTMLElement {
     newValue: string,
   ) {
     switch (attr) {
-      case 'starttime':
+      case 'startoffset':
         this._startOffset = parseFloat(newValue);
         break;
-      case 'endtime':
+      case 'endoffset':
         this._endOffset = parseFloat(newValue);
         break;
       default:

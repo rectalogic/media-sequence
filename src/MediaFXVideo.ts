@@ -68,8 +68,9 @@ export default class MediaFXVideo extends Media<HTMLVideoElement> {
       element.setAttribute('src', this.src);
 
     // Clone any <source>/<track> elements into the video
-    const childrenToClone =
-      this.shadowRoot?.querySelectorAll('> source, > track');
+    const childrenToClone = this.shadowRoot?.querySelectorAll(
+      ':scope > source, :scope > track',
+    );
     if (childrenToClone !== undefined) {
       element.replaceChildren(
         ...Array.from(childrenToClone).map(child => {

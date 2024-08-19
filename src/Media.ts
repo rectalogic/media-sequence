@@ -156,7 +156,7 @@ export default abstract class Media<
 
     this._animations.push(
       ...Array.from(
-        this.querySelectorAll<MediaFXTransform>('> mediafx-transform'),
+        this.querySelectorAll<MediaFXTransform>(':scope > mediafx-transform'),
       ).map(mediafxTransform => {
         const { effectInfo } = mediafxTransform;
         const effect = new KeyframeEffect(element, effectInfo.keyframes, {
@@ -175,7 +175,7 @@ export default abstract class Media<
 
     this._animations.push(
       ...Array.from(
-        this.querySelectorAll<MediaFXEffect>('> mediafx-effect'),
+        this.querySelectorAll<MediaFXEffect>(':scope > mediafx-effect'),
       ).map(mediafxEffect => {
         const timing = this.computeAnimationDelayDuration(
           mediafxEffect.startOffset,
