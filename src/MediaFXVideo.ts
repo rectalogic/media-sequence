@@ -35,21 +35,6 @@ export default class MediaFXVideo extends Media<HTMLVideoElement> {
     video.onplaying = this.onPlaying;
     video.onwaiting = this.onWaiting;
     video.onpause = this.onPause;
-
-    // Clone any <source>/<track> elements into the video
-    const childrenToClone =
-      this.shadowRoot?.querySelectorAll('> source, > track');
-    if (childrenToClone !== undefined) {
-      video.replaceChildren(
-        ...Array.from(childrenToClone).map(child => {
-          const clone = child.cloneNode(true);
-          if (clone instanceof HTMLSourceElement) {
-            clone.setAttribute('src', this.appendMediaFragment(clone.src));
-          }
-          return clone;
-        }),
-      );
-    }
     return video;
   }
 
@@ -78,12 +63,32 @@ export default class MediaFXVideo extends Media<HTMLVideoElement> {
     element.onerror = () =>
       reject(new Error('Video error', { cause: element.error }));
     element.oncanplay = () => resolve(this);
+
+    if (element.getAttribute('src') !== null && this.src !== undefined)
+      element.setAttribute('src', this.src);
+
+    // Clone any <source>/<track> elements into the video
+    const childrenToClone =
+      this.shadowRoot?.querySelectorAll('> source, > track');
+    if (childrenToClone !== undefined) {
+      element.replaceChildren(
+        ...Array.from(childrenToClone).map(child => {
+          const clone = child.cloneNode(true);
+          if (clone instanceof HTMLSourceElement) {
+            clone.setAttribute('src', this.appendMediaFragment(clone.src));
+          }
+          return clone;
+        }),
+      );
+    }
+
     element.load();
   }
 
   // XXX endTime could be > duration
 
   public get duration() {
+    if (this.element === undefined) throw new Error('media not loaded');
     return (
       (this.endTime === undefined
         ? this.element.duration * 1000
@@ -92,7 +97,8 @@ export default class MediaFXVideo extends Media<HTMLVideoElement> {
   }
 
   private onTimeUpdate = () => {
-    this.synchronizeClock(this.element.currentTime * 1000);
+    if (this.element !== undefined)
+      this.synchronizeClock(this.element.currentTime * 1000);
   };
 
   private onPause = () => {

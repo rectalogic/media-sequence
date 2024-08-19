@@ -39,12 +39,14 @@ export default class MediaFXImage extends Media<HTMLImageElement> {
     resolve: (value: unknown) => void,
     reject: (reason?: any) => void,
   ) {
-    this.element.onerror = event =>
+    const { element } = this;
+    if (element === undefined) throw new Error('Media not created');
+    element.onerror = event =>
       reject(new Error('Image error', { cause: event }));
-    this.element.onload = () => {
+    element.onload = () => {
       resolve(this);
     };
-    this.element.src = this.mediaInfo.src;
+    if (this.src !== undefined) element.setAttribute('src', this.src);
   }
 
   public get duration() {

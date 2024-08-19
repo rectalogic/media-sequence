@@ -56,19 +56,12 @@ export default abstract class Media<
       case 'src':
         this.src = newValue;
         break;
-      case 'starttime':
-        this._startTime = parseFloat(newValue);
-        break;
-      case 'endtime':
-        this._endTime = parseFloat(newValue);
-        break;
       default:
     }
   }
 
   public set src(value: string) {
     this._src = value;
-    if (this.element) this.element.setAttribute('src', value);
   }
 
   public get src(): string | undefined {
@@ -94,7 +87,6 @@ export default abstract class Media<
   public load(transitionOverlap: number) {
     this._element = this.createElement();
     this._element.className = 'media';
-    if (this.src !== undefined) this._element.setAttribute('src', this.src);
     this.shadowRoot?.appendChild(this._element);
     this._mediaClock = new Animation(new KeyframeEffect(this._element, null));
 
