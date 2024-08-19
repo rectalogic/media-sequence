@@ -2,29 +2,27 @@
 // SPDX-License-Identifier: MIT
 
 import { fromError } from 'zod-validation-error';
-import { effectSchema, Effect } from './schema/Effect.js';
+import { effectSchema, EffectInfo } from './schema/Effect.js';
 
 const template = document.createElement('template');
-template.innerHTML = `<template><slot></slot></template>`;
+template.innerHTML = '<slot></slot>';
 
-export class MediaFXEffect extends HTMLElement {
+export default class MediaFXEffect extends HTMLElement {
+  private _startOffset?: number;
+
+  private _endOffset?: number;
+
   static get observedAttributes(): string[] {
-    return ['starttime', 'endtime'];
+    return ['startoffset', 'endoffset'];
   }
-
-  private shadow: ShadowRoot;
-
-  private _startTime?: number;
-
-  private _endTime?: number;
 
   constructor() {
     super();
-    this.shadow = this.attachShadow({ mode: 'open' });
-    this.shadow.appendChild(template.content.cloneNode(true));
+    this.attachShadow({ mode: 'open' });
+    this.shadowRoot?.appendChild(template.content.cloneNode(true));
   }
 
-  public effect(): Effect {
+  public get effectInfo(): EffectInfo {
     try {
       return effectSchema.parse(this.textContent);
     } catch (error) {
@@ -32,20 +30,12 @@ export class MediaFXEffect extends HTMLElement {
     }
   }
 
-  public set startTime(value: number) {
-    this._startTime = value;
+  public get startOffset(): number | undefined {
+    return this._startOffset;
   }
 
-  public get startTime(): number | undefined {
-    return this._startTime;
-  }
-
-  public set endTime(value: number) {
-    this._endTime = value;
-  }
-
-  public get endTime(): number | undefined {
-    return this._endTime;
+  public get endOffset(): number | undefined {
+    return this._endOffset;
   }
 
   public attributeChangedCallback(
@@ -55,10 +45,10 @@ export class MediaFXEffect extends HTMLElement {
   ) {
     switch (attr) {
       case 'starttime':
-        this.startTime = parseFloat(newValue);
+        this._startOffset = parseFloat(newValue);
         break;
       case 'endtime':
-        this.endTime = parseFloat(newValue);
+        this._endOffset = parseFloat(newValue);
         break;
       default:
     }

@@ -3,60 +3,48 @@
 
 // XXX will need to handle the case where we are transitioning video and video/image and one of them stalls/buffers - need to pause the other so they stay in sync?
 
+import MediaFXEffect from './MediaFXEffect.js';
+import MediaFXTransform from './MediaFXTransform.js';
+
 const template = document.createElement('template');
 template.innerHTML = `
   <style>
     :host {
       display: block;
+      overflow: hidden;
     }
-    img, video {
+    .media {
       width: 100%;
       height: 100%;
+      object-position: var(--mediafx-object-position);
+      object-fit: var(--mediafx-object-fit);
     }
   </style>
   <slot></slot>`;
 
-export abstract class Media extends HTMLElement {
-  static get observedAttributes(): string[] {
-    return ['object-position', 'object-fit'];
-  }
+export default abstract class Media<
+  E extends HTMLElement = HTMLElement,
+> extends HTMLElement {
+  private _src?: string;
 
-  private objectPosition?: string;
+  private _mediaClock?: Animation;
 
-  private objectFit?: string;
-
-  private _mediaClock: Animation;
-
-  private _element: E;
+  private _element?: E;
 
   private _animations: Animation[] = [];
 
-  private _container: HTMLElement;
+  private _startTime: number = 0;
 
-  private _mediaInfo: MediaInfo;
+  private _endTime?: number;
 
-  private _disposed: boolean = false;
-
-  constructor(mediaInfo: MediaInfo, element: E) {
-    super();
-    this.shadow = this.attachShadow({ mode: 'open' });
-    this.shadow.appendChild(template.content.cloneNode(true));
-
-    this._element = element;
-    this._element.style.width = '100%';
-    this._element.style.height = '100%';
-    this._element.style.objectFit = mediaInfo.objectFit;
-    this._mediaInfo = mediaInfo;
-    this._container = document.createElement('div');
-    this._container.className = 'media';
-    this._container.appendChild(element);
-
-    this._mediaClock = new Animation(new KeyframeEffect(element, null));
+  static get observedAttributes(): string[] {
+    return ['src'];
   }
 
-  public connectedCallback() {
-    console.log('Custom media-fx element added to page.');
-    // XXX find mediafx-effect elements - could defer this to when we load the media
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this.shadowRoot?.appendChild(template.content.cloneNode(true));
   }
 
   public attributeChangedCallback(
@@ -64,23 +52,56 @@ export abstract class Media extends HTMLElement {
     _oldValue: string,
     newValue: string,
   ) {
-    //XXX update active element if we have one
     switch (attr) {
-      case 'object-position':
-        this.objectPosition = newValue;
+      case 'src':
+        this.src = newValue;
         break;
-      case 'object-fit':
-        this.objectFit = newValue;
+      case 'starttime':
+        this._startTime = parseFloat(newValue);
+        break;
+      case 'endtime':
+        this._endTime = parseFloat(newValue);
         break;
       default:
     }
   }
 
-  public load() {
+  public set src(value: string) {
+    this._src = value;
+    if (this.element) this.element.setAttribute('src', value);
+  }
+
+  public get src(): string | undefined {
+    return this._src;
+  }
+
+  public set startTime(value: number) {
+    this._startTime = value;
+  }
+
+  public get startTime(): number {
+    return this._startTime;
+  }
+
+  public set endTime(value: number) {
+    this._endTime = value;
+  }
+
+  public get endTime(): number | undefined {
+    return this._endTime;
+  }
+
+  public load(transitionOverlap: number) {
+    this._element = this.createElement();
+    this._element.className = 'media';
+    if (this.src !== undefined) this._element.setAttribute('src', this.src);
+    this.shadowRoot?.appendChild(this._element);
+    this._mediaClock = new Animation(new KeyframeEffect(this._element, null));
+
     return new Promise((resolve, reject) => {
       const handleResolve = (value: unknown) => {
         try {
-          this.configureEffects();
+          this.configureAnimations(transitionOverlap);
           resolve(value);
         } catch (error) {
           reject(error);
@@ -90,34 +111,38 @@ export abstract class Media extends HTMLElement {
     });
   }
 
+  protected abstract createElement(): E;
+
   protected abstract handleLoad(
     resolve: (value: unknown) => void,
     reject: (reason?: any) => void,
   ): void;
 
   // Positive offset is from startTime, negative is from endTime
-  private computeEffectDelayDuration(startOffset?: number, endOffset?: number) {
+  private computeAnimationDelayDuration(
+    startOffset?: number,
+    endOffset?: number,
+  ) {
     let startTime;
-    if (startOffset === undefined) startTime = this.mediaInfo.startTime;
-    else if (startOffset >= 0)
-      startTime = this.mediaInfo.startTime + startOffset;
+    if (startOffset === undefined) startTime = this.startTime;
+    else if (startOffset >= 0) startTime = this.startTime + startOffset;
     // Subtract offset from duration
-    else startTime = this.mediaInfo.startTime + (this.duration + startOffset);
+    else startTime = this.startTime + (this.duration + startOffset);
 
     const mediaEndTime =
-      this.mediaInfo.endTime === undefined
-        ? this.mediaInfo.startTime + this.duration
-        : this.mediaInfo.endTime;
+      this.endTime === undefined
+        ? this.startTime + this.duration
+        : this.endTime;
     let endTime;
     if (endOffset === undefined) {
       endTime = mediaEndTime;
-    } else if (endOffset >= 0) endTime = this.mediaInfo.startTime + endOffset;
+    } else if (endOffset >= 0) endTime = this.startTime + endOffset;
     // Subtract offset from duration
-    else endTime = this.mediaInfo.startTime + (this.duration + endOffset);
+    else endTime = this.startTime + (this.duration + endOffset);
 
-    if (startTime < this.mediaInfo.startTime || endTime > mediaEndTime)
+    if (startTime < this.startTime || endTime > mediaEndTime)
       throw new Error('Out of range animation offsets', {
-        cause: this.mediaInfo,
+        cause: this,
       });
 
     return {
@@ -126,77 +151,66 @@ export abstract class Media extends HTMLElement {
     };
   }
 
-  protected configureEffects() {
-    if (this.disposed) return;
+  private configureAnimations(transitionOverlap: number) {
+    const { element } = this;
+    if (element === undefined || this._mediaClock === undefined) return;
 
-    const overlap = this.mediaInfo.transition?.duration || 0;
     // No-op animation that provides our master clock
     this._mediaClock.effect?.updateTiming({
-      delay: this.mediaInfo.startTime,
-      duration: this.duration - overlap,
+      delay: this.startTime,
+      duration: this.duration - transitionOverlap,
     });
-    this._mediaClock.currentTime = this.mediaInfo.startTime;
+    this._mediaClock.currentTime = this.startTime || 0;
 
-    if (this.mediaInfo.transform) {
-      const keyframes = this.mediaInfo.transform.keyframes.map(kf => ({
-        offset: kf.offset,
-        easing: kf.easing,
-        transform: `translate(${
-          kf.translateX !== undefined ? kf.translateX * 100 : 0
-        }%, ${kf.translateY !== undefined ? kf.translateY * 100 : 0}%) scale(${
-          kf.scale !== undefined ? kf.scale : 1
-        }) rotate(${kf.rotate !== undefined ? kf.rotate : 0}deg)`,
-      }));
+    this._animations.push(
+      ...Array.from(
+        this.querySelectorAll<MediaFXTransform>('> mediafx-transform'),
+      ).map(mediafxTransform => {
+        const { effectInfo } = mediafxTransform;
+        const effect = new KeyframeEffect(element, effectInfo.keyframes, {
+          ...this.computeAnimationDelayDuration(
+            mediafxTransform.startOffset,
+            mediafxTransform.endOffset,
+          ),
+          ...effectInfo.options,
+        });
+        const animation = new Animation(effect);
+        animation.currentTime = this.startTime || 0;
+        animation.pause();
+        return animation;
+      }),
+    );
 
-      const effect = new KeyframeEffect(this.element, keyframes, {
-        ...this.computeEffectDelayDuration(
-          this.mediaInfo.transform.startOffset,
-          this.mediaInfo.transform.endOffset,
-        ),
-        fill: 'forwards',
-      });
-      const transform = new Animation(effect);
-      transform.currentTime = this.mediaInfo.startTime;
-      transform.pause();
-      this._animations.push(transform);
-    }
-
-    if (this.mediaInfo.animations) {
-      for (const animation of this.mediaInfo.animations) {
-        const timing = this.computeEffectDelayDuration(
-          animation.startOffset,
-          animation.endOffset,
+    this._animations.push(
+      ...Array.from(
+        this.querySelectorAll<MediaFXEffect>('> mediafx-effect'),
+      ).map(mediafxEffect => {
+        const timing = this.computeAnimationDelayDuration(
+          mediafxEffect.startOffset,
+          mediafxEffect.endOffset,
         );
+        const { effectInfo } = mediafxEffect;
         // Make all iterations play within our duration
         timing.duration /=
-          animation.iterations === undefined ? 1 : animation.iterations;
+          effectInfo.options?.iterations === undefined
+            ? 1
+            : effectInfo.options.iterations;
 
-        const effect = new KeyframeEffect(
-          this.renderableElement,
-          animation.keyframes,
-          {
-            ...timing,
-            composite: animation.composite,
-            fill: animation.fill,
-            easing: animation.easing,
-            iterations: animation.iterations,
-            iterationComposite: animation.iterationComposite,
-          },
-        );
-        const anim = new Animation(effect);
-        anim.currentTime = this.mediaInfo.startTime;
-        anim.pause();
-        this._animations.push(anim);
-      }
-    }
+        const effect = new KeyframeEffect(this, effectInfo.keyframes, {
+          ...timing,
+          ...effectInfo.options,
+        });
+        const animation = new Animation(effect);
+        animation.currentTime = this.startTime || 0;
+        animation.pause();
+        return animation;
+      }),
+    );
   }
 
-  public get mediaInfo() {
-    return this._mediaInfo;
-  }
-
+  // XXX now this is just 'this'
   public get renderableElement() {
-    return this._container;
+    return this;
   }
 
   protected get element() {
@@ -204,10 +218,10 @@ export abstract class Media extends HTMLElement {
   }
 
   private async awaitFinished() {
+    if (this._mediaClock === undefined) throw new Error('media not loaded');
     await this._mediaClock.finished;
-    if (this.mediaInfo.transition !== undefined) {
-      this._mediaClock.effect?.updateTiming({ duration: this.duration });
-    }
+    // Update timing in case we are accounting for transition overlap
+    this._mediaClock.effect?.updateTiming({ duration: this.duration });
   }
 
   public get finished() {
@@ -215,32 +229,36 @@ export abstract class Media extends HTMLElement {
   }
 
   protected startClock() {
+    if (this._mediaClock === undefined) throw new Error('media not loaded');
     this._mediaClock.play();
     for (const animation of this._animations) animation.play();
   }
 
   protected pauseClock() {
+    if (this._mediaClock === undefined) throw new Error('media not loaded');
     this._mediaClock.pause();
     for (const animation of this._animations) animation.pause();
   }
 
   protected synchronizeClock(time: number) {
+    if (this._mediaClock === undefined) throw new Error('media not loaded');
     this._mediaClock.currentTime = time;
     for (const animation of this._animations) animation.currentTime = time;
   }
 
   public get currentTime() {
+    if (this._mediaClock === undefined) return this.startTime;
     // CSSNumberish should always be number for our usecase
     // https://github.com/microsoft/TypeScript/issues/54496
     return this._mediaClock.currentTime !== null
       ? (this._mediaClock.currentTime as number)
-      : this.mediaInfo.startTime;
+      : this.startTime;
   }
 
   public abstract get duration(): number;
 
   public get playing() {
-    return this._mediaClock.playState === 'running';
+    return this._mediaClock?.playState === 'running';
   }
 
   public abstract play(): void;
@@ -248,13 +266,13 @@ export abstract class Media extends HTMLElement {
   public abstract pause(): void;
 
   public cancel(): void {
-    this.renderableElement.parentNode?.removeChild(this.renderableElement);
-    this._disposed = true;
-    this._mediaClock.cancel();
+    this.pause();
+    this.element?.remove();
+    this.element?.removeAttribute('src');
+    this._element = undefined;
+    this._mediaClock?.cancel();
+    this._mediaClock = undefined;
     for (const animation of this._animations) animation.cancel();
-  }
-
-  protected get disposed() {
-    return this._disposed;
+    this._animations = [];
   }
 }

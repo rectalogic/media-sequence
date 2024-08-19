@@ -1,16 +1,38 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
-import { Media } from './Media.js';
-import { MediaInfo } from './schema/index.js';
+import Media from './Media.js';
 
-export class MediaFXImage extends Media {
+export default class MediaFXImage extends Media<HTMLImageElement> {
   private static DEFAULT_DURATION = 5000;
 
-  constructor(mediaInfo: MediaInfo) {
-    super(mediaInfo, document.createElement('img'));
-    this.element.loading = 'eager';
-    this.element.crossOrigin = 'anonymous';
+  private _duration: number = MediaFXImage.DEFAULT_DURATION;
+
+  static override get observedAttributes(): string[] {
+    return [...Media.observedAttributes, 'duration'];
+  }
+
+  public override attributeChangedCallback(
+    attr: string,
+    _oldValue: string,
+    newValue: string,
+  ) {
+    switch (attr) {
+      case 'duration':
+        this._duration = parseFloat(newValue);
+        break;
+      default:
+        super.attributeChangedCallback(attr, _oldValue, newValue);
+        break;
+    }
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  protected override createElement() {
+    const image = document.createElement('img');
+    image.loading = 'eager';
+    image.crossOrigin = 'anonymous';
+    return image;
   }
 
   protected handleLoad(
@@ -26,9 +48,7 @@ export class MediaFXImage extends Media {
   }
 
   public get duration() {
-    return this.mediaInfo.endTime === undefined
-      ? MediaFXImage.DEFAULT_DURATION
-      : this.mediaInfo.endTime - this.mediaInfo.startTime;
+    return this._duration;
   }
 
   public play() {
@@ -37,11 +57,5 @@ export class MediaFXImage extends Media {
 
   public pause() {
     this.pauseClock();
-  }
-
-  public override cancel() {
-    super.cancel();
-    this.pause();
-    this.element.removeAttribute('src');
   }
 }

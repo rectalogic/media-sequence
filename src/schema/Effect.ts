@@ -32,4 +32,4 @@ export const effectSchema = z.object({
     .optional(),
   keyframes: z.array(keyframeSchema),
 });
-export type Effect = z.infer<typeof effectSchema>;
+export type EffectInfo = z.infer<typeof effectSchema>;
