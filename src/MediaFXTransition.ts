@@ -13,7 +13,7 @@ import MediaFXContent from './MediaFXContent.js';
 type TargetType = 'source' | 'dest';
 type TransitionInfo = {
   style?: CSSStyleSheet;
-  effect?: EffectInfo & { options: { duration: number } };
+  animation?: Animation;
 };
 
 const template = document.createElement('template');
@@ -36,17 +36,14 @@ export class MediaFXTransition extends HTMLElement {
     this.shadowRoot?.appendChild(template.content.cloneNode(true));
   }
 
-  private findTarget(targetType: TargetType) {
-    return this.shadowRoot?.querySelector(
-      `:scope > mediafx-target[type="${targetType}"`,
-    );
-  }
-
   public async targetEffect(
     targetType: TargetType,
+    targetElement: HTMLElement,
   ): Promise<TransitionInfo | null> {
     try {
-      const target = this.findTarget(targetType);
+      const target = this.shadowRoot?.querySelector(
+        `:scope > mediafx-target[type="${targetType}"`,
+      );
       if (target) {
         const targetJson = await target
           .querySelector<MediaFXContent>(
@@ -65,7 +62,10 @@ export class MediaFXTransition extends HTMLElement {
             ...effect.options,
             duration: this.duration / (effect.options?.iterations || 1),
           };
-          result.effect = { keyframes: effect.keyframes, options };
+          result.animation = new Animation(
+            new KeyframeEffect(targetElement, effect.keyframes, options),
+          );
+          result.animation.pause();
         }
         if (targetStyle) {
           const sheet = new CSSStyleSheet();
