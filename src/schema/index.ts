@@ -4,3 +4,4 @@
 export * from './Animation.js';
 export * from './Transition.js';
 export * from './Media.js';
+export * from './Effect.js';

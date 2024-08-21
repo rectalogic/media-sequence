@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import * as animations from '@shoelace-style/animations';
-import { TransitionInfo } from './schema/index.js';
+import { EffectInfo } from './schema/index.js';
 
 // https://github.com/shoelace-style/animations/pull/4
 declare module '@shoelace-style/animations' {
@@ -16,18 +16,26 @@ declare module '@shoelace-style/animations' {
   export const bounceOutUp: Animation;
 }
 
+interface TransitionTargetInfo {
+  effects?: EffectInfo[];
+  style?: string;
+}
+
+interface TransitionInfo {
+  source?: TransitionTargetInfo;
+  dest?: TransitionTargetInfo;
+}
+
 interface TransitionsMap {
   [key: string]: TransitionInfo;
 }
 
-const buildTransition = (source?: Keyframe[], dest?: Keyframe[]) => ({
-  source: source ? { animations: [{ keyframes: source }] } : {},
-  dest: dest
-    ? {
-        animations: [{ keyframes: dest }],
-      }
-    : {},
-});
+const buildTransition = (source?: Keyframe[], dest?: Keyframe[]) => {
+  const transition: TransitionInfo = {};
+  if (source) transition.source = { effects: [{ keyframes: source }] };
+  if (dest) transition.dest = { effects: [{ keyframes: dest }] };
+  return transition;
+};
 
 const wipe = (direction: 'top' | 'bottom' | 'left' | 'right') => {
   let top = '0';
@@ -63,11 +71,11 @@ export const Transitions: TransitionsMap = {
   get crossFade() {
     return {
       source: {
-        style: { 'mix-blend-mode': 'plus-lighter' },
-        animations: [{ keyframes: [{ opacity: 1 }, { opacity: 0 }] }],
+        style: 'mix-blend-mode: plus-lighter;',
+        effects: [{ keyframes: [{ opacity: 1 }, { opacity: 0 }] }],
       },
       dest: {
-        animations: [
+        effects: [
           {
             keyframes: [{ opacity: 0 }, { opacity: 1 }],
           },
@@ -101,9 +109,8 @@ export const Transitions: TransitionsMap = {
   },
   get spotlight() {
     return {
-      source: {},
       dest: {
-        animations: [
+        effects: [
           {
             keyframes: [
               { offset: 0, clipPath: 'circle(0% at 50% 50%)' },
@@ -121,7 +128,7 @@ export const Transitions: TransitionsMap = {
   get chevron() {
     return {
       source: {
-        animations: [
+        effects: [
           {
             keyframes: [
               {
@@ -144,7 +151,7 @@ export const Transitions: TransitionsMap = {
         ],
       },
       dest: {
-        animations: [
+        effects: [
           {
             keyframes: [
               {

@@ -6,11 +6,12 @@
 // XXX need to support canned transitions too
 
 import { fromError } from 'zod-validation-error';
-import { effectSchema } from './schema/Effect.js';
+import { effectSchema, EffectInfo } from './schema/Effect.js';
 import MediaFXContent from './MediaFXContent.js';
+import { Transitions } from './Transitions.js';
 
 type TargetType = 'source' | 'dest';
-type TransitionInfo = {
+type Transition = {
   style?: CSSStyleSheet;
   animations?: Animation[];
 };
@@ -25,8 +26,10 @@ template.innerHTML = `
 export class MediaFXTransition extends HTMLElement {
   private _duration: number = 0;
 
+  private _preset?: string;
+
   static get observedAttributes(): string[] {
-    return ['duration'];
+    return ['duration', 'preset'];
   }
 
   constructor() {
@@ -35,10 +38,58 @@ export class MediaFXTransition extends HTMLElement {
     this.shadowRoot?.appendChild(template.content.cloneNode(true));
   }
 
+  private buildTransition(
+    targetType: TargetType,
+    targetElement: HTMLElement,
+    targetEffects?: EffectInfo[],
+    targetStyle?: string | null,
+  ) {
+    let animations;
+    let style;
+    if (targetEffects) {
+      animations = targetEffects.map(effect => {
+        const options = {
+          ...effect.options,
+          duration: this.duration / (effect.options?.iterations || 1),
+        };
+        const animation = new Animation(
+          new KeyframeEffect(targetElement, effect.keyframes, options),
+        );
+        animation.pause();
+        return animation;
+      });
+    }
+
+    if (targetStyle) {
+      const sheet = new CSSStyleSheet();
+      sheet.insertRule(`::slotted(.${targetType}) { ${targetStyle} }`);
+      style = sheet;
+    }
+
+    if (animations || style) {
+      const transition: Transition = {};
+      if (animations) transition.animations = animations;
+      if (style) transition.style = style;
+      return transition;
+    }
+    return null;
+  }
+
   public async targetEffect(
     targetType: TargetType,
     targetElement: HTMLElement,
-  ): Promise<TransitionInfo | null> {
+  ): Promise<Transition | null> {
+    if (this._preset) {
+      const transition = Transitions[this._preset];
+      if (!(targetType in transition)) return null;
+      return this.buildTransition(
+        targetType,
+        targetElement,
+        transition[targetType]?.effects,
+        transition[targetType]?.style,
+      );
+    }
+
     try {
       const target = this.shadowRoot?.querySelector(
         `:scope > mediafx-target[type="${targetType}"`,
@@ -56,27 +107,16 @@ export class MediaFXTransition extends HTMLElement {
             ),
           ).map(async tj => tj.content()),
         );
-        const result: TransitionInfo = {};
+        let effects;
         if (targetJson.length > 0) {
-          result.animations = targetJson.map(tj => {
-            const effect = effectSchema.parse(tj);
-            const options = {
-              ...effect.options,
-              duration: this.duration / (effect.options?.iterations || 1),
-            };
-            const animation = new Animation(
-              new KeyframeEffect(targetElement, effect.keyframes, options),
-            );
-            animation.pause();
-            return animation;
-          });
+          effects = targetJson.map(tj => effectSchema.parse(tj));
         }
-        if (targetStyle) {
-          const sheet = new CSSStyleSheet();
-          sheet.insertRule(`::slotted(.${targetType}) { ${targetStyle} }`);
-          result.style = sheet;
-        }
-        return result;
+        return this.buildTransition(
+          targetType,
+          targetElement,
+          effects,
+          targetStyle,
+        );
       }
       return null;
     } catch (error) {
@@ -96,6 +136,10 @@ export class MediaFXTransition extends HTMLElement {
     switch (attr) {
       case 'duration':
         this._duration = parseFloat(newValue);
+        break;
+      case 'preset':
+        if (newValue in Transitions) this._preset = newValue;
+        else throw new Error(`Invalid preset ${newValue}`);
         break;
       default:
     }
