@@ -1,8 +1,5 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
-import { fixture, expect } from '@open-wc/testing';
-import { MediaFX } from '../src/MediaFX.js';
-import '../src/media-fx.js';
 
 describe('MediaFX', () => {
   it('has a default header "Hey there" and counter 5', async () => {

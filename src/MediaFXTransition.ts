@@ -11,7 +11,7 @@ import MediaFXContent from './MediaFXContent.js';
 import { Transitions } from './Transitions.js';
 
 type TargetType = 'source' | 'dest';
-type Transition = {
+export type Transition = {
   style?: CSSStyleSheet;
   animations?: Animation[];
 };
@@ -23,7 +23,7 @@ template.innerHTML = `
   </style>
   <slot></slot>`;
 
-export class MediaFXTransition extends HTMLElement {
+export default class MediaFXTransition extends HTMLElement {
   private _duration: number = 0;
 
   private _preset?: string;
@@ -72,16 +72,17 @@ export class MediaFXTransition extends HTMLElement {
       if (style) transition.style = style;
       return transition;
     }
-    return null;
+    return undefined;
   }
 
+  // XXX cache effects and style, rebuild on slotchange
   public async targetEffect(
     targetType: TargetType,
     targetElement: HTMLElement,
-  ): Promise<Transition | null> {
+  ): Promise<Transition | undefined> {
     if (this._preset) {
       const transition = Transitions[this._preset];
-      if (!(targetType in transition)) return null;
+      if (!(targetType in transition)) return undefined;
       return this.buildTransition(
         targetType,
         targetElement,
@@ -118,7 +119,7 @@ export class MediaFXTransition extends HTMLElement {
           targetStyle,
         );
       }
-      return null;
+      return undefined;
     } catch (error) {
       throw fromError(error);
     }

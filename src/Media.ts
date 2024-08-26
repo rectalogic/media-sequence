@@ -84,16 +84,17 @@ export default abstract class Media<
     return this._endTime;
   }
 
-  public load(transitionOverlap: number) {
+  public load(transitionOverlap?: number) {
     this._element = this.createElement();
     this._element.className = 'media';
-    this.shadowRoot?.appendChild(this._element); //XXX don't want to append until sequence is ready - should it append directly to itself?
     this._mediaClock = new Animation(new KeyframeEffect(this._element, null));
 
     return new Promise((resolve, reject) => {
       const handleResolve = (value: unknown) => {
         try {
-          this.configureAnimations(transitionOverlap);
+          this.configureAnimations(
+            transitionOverlap === undefined ? 0 : transitionOverlap,
+          );
           resolve(value);
         } catch (error) {
           reject(error);
@@ -104,6 +105,10 @@ export default abstract class Media<
   }
 
   protected abstract createElement(): E;
+
+  public mountElement() {
+    if (this._element) this.shadowRoot?.appendChild(this._element);
+  }
 
   protected abstract handleLoad(
     resolve: (value: unknown) => void,
@@ -155,58 +160,52 @@ export default abstract class Media<
     this._mediaClock.currentTime = this.startTime || 0;
 
     this._animations.push(
-      ...Array.from(
-        await Promise.all(
-          Array.from(
-            this.querySelectorAll<MediaFXTransform>(
-              ':scope > mediafx-transform',
+      ...(await Promise.all(
+        Array.from(
+          this.querySelectorAll<MediaFXTransform>(':scope > mediafx-transform'),
+        ).map(async mediafxTransform => {
+          const effectInfo = await mediafxTransform.effectInfo();
+          const effect = new KeyframeEffect(element, effectInfo.keyframes, {
+            ...this.computeAnimationDelayDuration(
+              mediafxTransform.startOffset,
+              mediafxTransform.endOffset,
             ),
-          ).map(async mediafxTransform => {
-            const effectInfo = await mediafxTransform.effectInfo();
-            const effect = new KeyframeEffect(element, effectInfo.keyframes, {
-              ...this.computeAnimationDelayDuration(
-                mediafxTransform.startOffset,
-                mediafxTransform.endOffset,
-              ),
-              ...effectInfo.options,
-            });
-            const animation = new Animation(effect);
-            animation.currentTime = this.startTime || 0;
-            animation.pause();
-            return animation;
-          }),
-        ),
-      ),
+            ...effectInfo.options,
+          });
+          const animation = new Animation(effect);
+          animation.currentTime = this.startTime || 0;
+          animation.pause();
+          return animation;
+        }),
+      )),
     );
 
     this._animations.push(
-      ...Array.from(
-        await Promise.all(
-          Array.from(
-            this.querySelectorAll<MediaFXEffect>(':scope > mediafx-effect'),
-          ).map(async mediafxEffect => {
-            const timing = this.computeAnimationDelayDuration(
-              mediafxEffect.startOffset,
-              mediafxEffect.endOffset,
-            );
-            const effectInfo = await mediafxEffect.effectInfo();
-            // Make all iterations play within our duration
-            timing.duration /=
-              effectInfo.options?.iterations === undefined
-                ? 1
-                : effectInfo.options.iterations;
+      ...(await Promise.all(
+        Array.from(
+          this.querySelectorAll<MediaFXEffect>(':scope > mediafx-effect'),
+        ).map(async mediafxEffect => {
+          const timing = this.computeAnimationDelayDuration(
+            mediafxEffect.startOffset,
+            mediafxEffect.endOffset,
+          );
+          const effectInfo = await mediafxEffect.effectInfo();
+          // Make all iterations play within our duration
+          timing.duration /=
+            effectInfo.options?.iterations === undefined
+              ? 1
+              : effectInfo.options.iterations;
 
-            const effect = new KeyframeEffect(this, effectInfo.keyframes, {
-              ...timing,
-              ...effectInfo.options,
-            });
-            const animation = new Animation(effect);
-            animation.currentTime = this.startTime || 0;
-            animation.pause();
-            return animation;
-          }),
-        ),
-      ),
+          const effect = new KeyframeEffect(this, effectInfo.keyframes, {
+            ...timing,
+            ...effectInfo.options,
+          });
+          const animation = new Animation(effect);
+          animation.currentTime = this.startTime || 0;
+          animation.pause();
+          return animation;
+        }),
+      )),
     );
   }
 

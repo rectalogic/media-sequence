@@ -1,11 +1,8 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
-import createMedia from './MediaFactory.js';
-import { Media } from './Media.js';
-import { Transition } from './Transition.js';
-import { Transitions } from './Transitions.js';
-import { MediaInfo, processMediaInfoArray } from './schema/index.js';
+import Media from './Media.js';
+import MediaFXTransition, { Transition } from './MediaFXTransition.js';
 
 interface Playable {
   play(): void;
@@ -13,39 +10,58 @@ interface Playable {
   cancel(): void;
 }
 
-export class MediaFXSequence extends HTMLElement {
+interface MediaItem {
+  media: Media;
+  transition?: MediaFXTransition;
+}
+
+const template = document.createElement('template');
+template.innerHTML = `
+  <style>
+    :host([hidden]) {
+      display: none;
+    }
+    :host {
+      display: inline-grid;
+    }
+  </style>
+  <slot></slot>`;
+
+export default class MediaFXSequence extends HTMLElement {
   static get observedAttributes(): string[] {
     return ['width', 'height'];
   }
 
-  private shadow: ShadowRoot;
-
   private sheet: CSSStyleSheet;
 
-  private activeMedia?: Media;
+  private activeMedia?: MediaItem;
 
-  private loadingMedia?: Media;
+  private loadingMedia?: MediaItem;
 
   private playables: Playable[] = [];
 
   private loadingMediaPromise?: Promise<unknown>;
 
-  private _playlist?: ReadonlyArray<MediaInfo>;
+  private mediaItems?: ReadonlyArray<MediaItem>;
 
-  private mediaInfos?: MediaInfo[];
+  private currentMediaItems?: MediaItem[];
 
   private eventLoop?: Promise<void>;
 
   constructor() {
     super();
-    this.shadow = this.attachShadow({ mode: 'open' });
+    this.attachShadow({ mode: 'open' });
+    this.shadowRoot?.appendChild(template.content.cloneNode(true));
     this.sheet = new CSSStyleSheet();
-    this.onSizeAttributesChanged();
-    this.shadow.adoptedStyleSheets.push(this.sheet);
+    this.updateStyleSheet();
+    this.shadowRoot?.adoptedStyleSheets.push(this.sheet);
+
+    //XXX add slotchanged handler to invoke processMediaItems
   }
 
   public connectedCallback() {
-    console.log('Custom media-fx element added to page.');
+    console.log('mediafx-sequence connected'); //XXX
+    this.processMediaItems();
   }
 
   public attributeChangedCallback(
@@ -53,43 +69,43 @@ export class MediaFXSequence extends HTMLElement {
     _oldValue: string,
     _newValue: string,
   ) {
-    console.log(`Custom media-fx attributeChangedCallback ${attr}`);
+    console.log(`Custom mediafx-sequence attributeChangedCallback ${attr}`);
     switch (attr) {
       case 'width':
       case 'height':
-        this.onSizeAttributesChanged();
+        this.updateStyleSheet();
         break;
       default:
     }
   }
 
-  public async setPlaylist(data: unknown) {
+  private async processMediaItems() {
     this.stop();
     await this.eventLoop;
-    this._playlist = undefined;
-    this.playables = [];
-    this.mediaInfos = undefined;
-    this.activeMedia = undefined;
 
-    if (data !== undefined) {
-      this._playlist = processMediaInfoArray(data);
-      await this.initialize();
+    const mediaItems = [];
+    let currentItem: MediaItem | undefined;
+    for (const element of this.querySelectorAll(
+      ':scope > mediafx-video, :scope > mediafx-image, :scope > mediafx-transition',
+    )) {
+      if (element instanceof Media) {
+        currentItem = { media: element };
+        mediaItems.push(currentItem);
+      } else if (element instanceof MediaFXTransition) {
+        if (currentItem === undefined || currentItem.transition)
+          throw new Error('Unexpected transition', { cause: element });
+        currentItem.transition = element;
+      }
     }
+    this.mediaItems = mediaItems;
+    await this.initialize();
   }
 
-  public get playlist(): ReadonlyArray<MediaInfo> | undefined {
-    return this._playlist;
-  }
-
-  private onSizeAttributesChanged() {
+  private updateStyleSheet() {
     const width = this.getAttribute('width');
     const height = this.getAttribute('height');
     this.sheet.replaceSync(`
-      :host([hidden]) {
-        display: none;
-      }
       :host {
-        display: inline-grid;
         width: ${width !== null ? `${width}px` : 'auto'};
         height: ${height !== null ? `${height}px` : 'auto'};
       }
@@ -109,15 +125,15 @@ export class MediaFXSequence extends HTMLElement {
   }
 
   public stop() {
-    this.mediaInfos = undefined;
+    this.currentMediaItems = undefined;
     for (const playable of this.playables) playable.cancel();
     this.playables = [];
     if (this.activeMedia) {
-      this.activeMedia.cancel();
+      this.activeMedia.media.cancel();
       this.activeMedia = undefined;
     }
     if (this.loadingMedia) {
-      this.loadingMedia.cancel();
+      this.loadingMedia.media.cancel();
       this.loadingMedia = undefined;
       this.loadingMediaPromise = undefined;
     }
@@ -132,40 +148,54 @@ export class MediaFXSequence extends HTMLElement {
   private async runEventLoop() {
     while (this.activeMedia !== undefined) {
       try {
-        // eslint-disable-next-line no-await-in-loop
-        await this.activeMedia.finished;
-        if (this.loadingMedia && this.activeMedia.mediaInfo.transition) {
-          // eslint-disable-next-line no-await-in-loop
-          await this.loadingMediaPromise;
-          this.shadow.insertBefore(
-            this.loadingMedia.renderableElement,
-            this.activeMedia.renderableElement,
+        let sourceTransitionPromise: Promise<Transition | undefined> | null =
+          null;
+        let destTransitionPromise: Promise<Transition | undefined> | null =
+          null;
+        if (this.loadingMedia && this.activeMedia.transition) {
+          sourceTransitionPromise = this.activeMedia.transition.targetEffect(
+            'source',
+            this.activeMedia.media,
           );
-          const transitionInfo = this.activeMedia.mediaInfo.transition;
-          let transition;
-          if ('name' in transitionInfo) {
-            if (transitionInfo.name in Transitions) {
-              transition = new Transition(
-                this.activeMedia.mediaInfo.transition.duration,
-                this.activeMedia.renderableElement,
-                this.loadingMedia.renderableElement,
-                Transitions[transitionInfo.name],
-              );
-            } else throw new Error('unreachable'); // Validation ensures name is in Transitions
-          } else {
-            transition = new Transition(
-              this.activeMedia.mediaInfo.transition.duration,
-              this.activeMedia.renderableElement,
-              this.loadingMedia.renderableElement,
-              transitionInfo.transition,
+          destTransitionPromise = this.activeMedia.transition.targetEffect(
+            'dest',
+            this.loadingMedia.media,
+          );
+        }
+
+        // eslint-disable-next-line no-await-in-loop
+        await this.activeMedia.media.finished;
+
+        if (
+          this.loadingMedia &&
+          (sourceTransitionPromise || destTransitionPromise)
+        ) {
+          // eslint-disable-next-line no-await-in-loop
+          const [, sourceTransition, destTransition] = await Promise.all([
+            this.loadingMediaPromise,
+            sourceTransitionPromise,
+            destTransitionPromise,
+          ]);
+          this.loadingMedia.media.mountElement();
+
+          // XXX deal with CSS
+
+          const animations: Promise<Animation>[] = [];
+          this.playables = [this.loadingMedia.media, this.activeMedia.media];
+          if (sourceTransition?.animations) {
+            this.playables.push(...sourceTransition.animations);
+            animations.push(
+              ...sourceTransition.animations.map(a => a.finished),
             );
           }
-
-          this.playables = [this.loadingMedia, this.activeMedia, transition];
+          if (destTransition?.animations) {
+            this.playables.push(...destTransition.animations);
+            animations.push(...destTransition.animations.map(a => a.finished));
+          }
           this.play();
 
           // eslint-disable-next-line no-await-in-loop
-          await transition.finished;
+          await Promise.all(animations);
         }
       } catch (error) {
         // Return if animation cancelled
@@ -197,21 +227,21 @@ export class MediaFXSequence extends HTMLElement {
   }
 
   private async nextMedia() {
-    if (!this.mediaInfos || !this.activeMedia) return false;
+    if (!this.currentMediaItems || !this.activeMedia) return false;
 
     if (this.loadingMedia) {
       const currentMedia = this.activeMedia;
       await this.loadingMediaPromise;
       this.activeMedia = this.loadingMedia;
-      this.mediaInfos.shift();
-      this.activeMedia.play();
-      this.playables = [this.activeMedia];
-      this.shadow.replaceChildren(this.activeMedia.renderableElement);
-      currentMedia.cancel();
+      this.currentMediaItems.shift();
+      this.activeMedia.media.play();
+      this.playables = [this.activeMedia.media];
+      this.activeMedia.media.mountElement();
+      currentMedia.media.cancel();
 
-      if (this.mediaInfos.length > 1) {
-        this.loadingMedia = createMedia(this.mediaInfos[1]);
-        this.loadingMediaPromise = this.loadingMedia.load();
+      if (this.currentMediaItems.length > 1) {
+        [, this.loadingMedia] = this.currentMediaItems;
+        this.loadingMediaPromise = this.loadingMedia?.media.load();
       } else {
         this.loadingMedia = undefined;
         this.loadingMediaPromise = undefined;
@@ -222,19 +252,22 @@ export class MediaFXSequence extends HTMLElement {
   }
 
   private async initialize() {
-    if (!this._playlist) return;
+    if (!this.mediaItems) return;
     await this.eventLoop;
-    this.mediaInfos = [...this._playlist];
+    this.currentMediaItems = [...this.mediaItems];
+
     try {
-      if (this.mediaInfos.length > 1) {
-        this.loadingMedia = createMedia(this.mediaInfos[1]);
-        this.loadingMediaPromise = this.loadingMedia.load();
+      if (this.currentMediaItems.length > 1) {
+        [, this.loadingMedia] = this.currentMediaItems;
+        this.loadingMediaPromise = this.loadingMedia.media.load(
+          this.loadingMedia.transition?.duration,
+        );
       }
 
-      this.activeMedia = createMedia(this.mediaInfos[0]);
-      await this.activeMedia.load();
-      this.shadow.replaceChildren(this.activeMedia.renderableElement);
-      this.playables = [this.activeMedia];
+      [this.activeMedia] = this.currentMediaItems;
+      await this.activeMedia.media.load(this.activeMedia.transition?.duration);
+      this.activeMedia.media.mountElement();
+      this.playables = [this.activeMedia.media];
 
       this.eventLoop = this.runEventLoop();
     } catch (error) {
