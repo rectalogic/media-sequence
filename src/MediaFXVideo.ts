@@ -38,10 +38,6 @@ export default class MediaFXVideo extends Media<HTMLVideoElement> {
     return video;
   }
 
-  public override set src(value: string) {
-    super.src = this.appendMediaFragment(value);
-  }
-
   private appendMediaFragment(url: string): string {
     // Use media fragments https://www.w3.org/TR/media-frags/
     if (this.startTime !== 0 || this.endTime !== undefined) {
@@ -64,14 +60,14 @@ export default class MediaFXVideo extends Media<HTMLVideoElement> {
       reject(new Error('Video error', { cause: element.error }));
     element.oncanplay = () => resolve(this);
 
-    if (element.getAttribute('src') !== null && this.src !== undefined)
-      element.setAttribute('src', this.src);
+    if (this.src !== undefined)
+      element.setAttribute('src', this.appendMediaFragment(this.src));
 
     // Clone any <source>/<track> elements into the video
     const childrenToClone = this.shadowRoot?.querySelectorAll(
       ':scope > source, :scope > track',
     );
-    if (childrenToClone !== undefined) {
+    if (childrenToClone && childrenToClone.length > 0) {
       element.replaceChildren(
         ...Array.from(childrenToClone).map(child => {
           const clone = child.cloneNode(true);

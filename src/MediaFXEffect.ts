@@ -36,7 +36,9 @@ export default class MediaFXEffect extends HTMLElement {
 
   public async effectInfo(): Promise<EffectInfo> {
     try {
-      return effectSchema.parse(await this.effectContent());
+      const content = await this.effectContent();
+      if (!content) throw new Error('invalid mediafx-effect content');
+      return effectSchema.parse(JSON.parse(content));
     } catch (error) {
       throw fromError(error);
     }

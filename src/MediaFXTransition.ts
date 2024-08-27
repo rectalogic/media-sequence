@@ -62,7 +62,7 @@ export default class MediaFXTransition extends HTMLElement {
 
     if (targetStyle) {
       const sheet = new CSSStyleSheet();
-      sheet.insertRule(`::slotted(.${targetType}) { ${targetStyle} }`);
+      sheet.insertRule(`:host { ${targetStyle} }`);
       style = sheet;
     }
 
@@ -110,7 +110,9 @@ export default class MediaFXTransition extends HTMLElement {
         );
         let effects;
         if (targetJson.length > 0) {
-          effects = targetJson.map(tj => effectSchema.parse(tj));
+          effects = targetJson
+            .filter((tj): tj is string => !!tj)
+            .map(tj => effectSchema.parse(JSON.parse(tj)));
         }
         return this.buildTransition(
           targetType,

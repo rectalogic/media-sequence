@@ -12,6 +12,7 @@ template.innerHTML = `
     :host {
       display: block;
       overflow: hidden;
+      grid-area: 1 / 1;
     }
     .media {
       width: 100%;
@@ -236,7 +237,7 @@ export default abstract class Media<
   }
 
   protected pauseClock() {
-    if (this._mediaClock === undefined) throw new Error('media not loaded');
+    if (this._mediaClock === undefined) return;
     this._mediaClock.pause();
     for (const animation of this._animations) animation.pause();
   }
@@ -267,7 +268,7 @@ export default abstract class Media<
   public abstract pause(): void;
 
   public cancel(): void {
-    this.pause();
+    if (this.shadowRoot) this.shadowRoot.adoptedStyleSheets = [];
     this.element?.remove();
     this.element?.removeAttribute('src');
     this._element = undefined;

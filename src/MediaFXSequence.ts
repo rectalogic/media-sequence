@@ -178,7 +178,14 @@ export default class MediaFXSequence extends HTMLElement {
           ]);
           this.loadingMedia.media.mountElement();
 
-          // XXX deal with CSS
+          if (sourceTransition?.style && this.activeMedia.media.shadowRoot)
+            this.activeMedia.media.shadowRoot.adoptedStyleSheets = [
+              sourceTransition.style,
+            ];
+          if (destTransition?.style && this.loadingMedia.media.shadowRoot)
+            this.loadingMedia.media.shadowRoot.adoptedStyleSheets = [
+              destTransition.style,
+            ];
 
           const animations: Promise<Animation>[] = [];
           this.playables = [this.loadingMedia.media, this.activeMedia.media];
@@ -196,6 +203,11 @@ export default class MediaFXSequence extends HTMLElement {
 
           // eslint-disable-next-line no-await-in-loop
           await Promise.all(animations);
+
+          if (this.activeMedia.media.shadowRoot)
+            this.activeMedia.media.shadowRoot.adoptedStyleSheets = [];
+          if (this.loadingMedia.media.shadowRoot)
+            this.loadingMedia.media.shadowRoot.adoptedStyleSheets = [];
         }
       } catch (error) {
         // Return if animation cancelled
