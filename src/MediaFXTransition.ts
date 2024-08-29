@@ -28,6 +28,22 @@ export default class MediaFXTransition extends HTMLElement {
 
   private _preset?: string;
 
+  static {
+    // We should be able to declare custom @property in each transitions CSS, but this is broken in all browsers
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=1883979
+    // https://issues.chromium.org/issues/40779474
+    // https://wpt.live/css/css-properties-values-api/at-property-shadow.html
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(`
+      @property --mediafx-angle {
+        syntax: "<angle>";
+        inherits: false;
+        initial-value: 0deg;
+      }
+    `);
+    document.adoptedStyleSheets.push(sheet);
+  }
+
   static get observedAttributes(): string[] {
     return ['duration', 'preset'];
   }
@@ -62,7 +78,7 @@ export default class MediaFXTransition extends HTMLElement {
 
     if (targetStyle) {
       const sheet = new CSSStyleSheet();
-      sheet.insertRule(`:host { ${targetStyle} }`);
+      sheet.replaceSync(targetStyle);
       style = sheet;
     }
 

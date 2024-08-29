@@ -71,7 +71,7 @@ export const Transitions: TransitionsMap = {
   get crossFade() {
     return {
       source: {
-        style: 'mix-blend-mode: plus-lighter;',
+        style: ':host { mix-blend-mode: plus-lighter; }',
         effects: [{ keyframes: [{ opacity: 1 }, { opacity: 0 }] }],
       },
       dest: {
@@ -169,6 +169,28 @@ export const Transitions: TransitionsMap = {
                 clipPath:
                   'polygon(100% 0%, 100% 50%, 100% 100%, 0% 100%, 0% 50%, 0% 0%)',
               },
+            ],
+          },
+        ],
+      },
+    };
+  },
+  get clockWipe() {
+    //XXX need to be able to pass in parameters to transitions
+    const size = 10;
+    return {
+      source: {
+        style: `
+          :host {
+            mask-image: conic-gradient(black calc(var(--mediafx-angle) - ${size}deg), white var(--mediafx-angle), white);
+            mask-mode: luminance;
+          }
+        `,
+        effects: [
+          {
+            keyframes: [
+              { offset: 0, '--mediafx-angle': '0deg' },
+              { offset: 1, '--mediafx-angle': `${360 + size}deg` },
             ],
           },
         ],

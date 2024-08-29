@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        background: #fafafa;
+      }
+    </style>
+    <script src="../dist/src/index.js" type="module"></script>
+    <script>
+      window.onload = async () => {
+        const ms = document.querySelector('#sequence');
+        ms.addEventListener('error', event =>
+          console.error(`${event.message} ${event.error}`),
+        );
+      };
+    </script>
+  </head>
+  <body>
+    <mediafx-sequence
+      id="sequence"
+      width="640"
+      height="360"
+      style="background-color: #f00; isolation: isolate"
+    >
+      <mediafx-video
+        src="https://cdn.glitch.me/364f8e5a-f12f-4f82-a386-20e6be6b1046/bbb_sunflower_1080p_30fps_normal_10min.mp4?v=1715787973754"
+        startTime="100000"
+        endTime="105000"
+      >
+      </mediafx-video>
+      <mediafx-transition
+        duration="1000"
+        preset="clockWipe"
+      ></mediafx-transition>
+      <mediafx-video
+        src="https://cdn.glitch.me/364f8e5a-f12f-4f82-a386-20e6be6b1046/elephants_dream_1280x720.mp4?v=1715789814855"
+        startTime="100000"
+        endTime="105000"
+      >
+      </mediafx-video>
+    </mediafx-sequence>
+
+    <p>
+      <button onclick="sequence.play()">Play</button>
+      <button onclick="sequence.pause()">Pause</button>
+    </p>
+  </body>
+</html>

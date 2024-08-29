@@ -2,11 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 const template = document.createElement('template');
+// Wrap contents in <script> to avoid FOUC
 template.innerHTML = `
   <style>
     :host { display: none; }
   </style>
-  <slot></slot>`;
+  <script type="application/mediafx-content">
+    <slot></slot>
+  </script>`;
 
 export default class MediaFXContent extends HTMLElement {
   private _src?: string;
