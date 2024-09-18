@@ -148,34 +148,29 @@ export default class MediaFXSequence extends HTMLElement {
   private async runEventLoop() {
     while (this.activeMedia !== undefined) {
       try {
-        let sourceTransitionPromise: Promise<Transition | undefined> | null =
-          null;
-        let destTransitionPromise: Promise<Transition | undefined> | null =
-          null;
+        let sourceTransition: Transition | undefined | null = null;
+        let destTransition: Transition | undefined | null = null;
         if (this.loadingMedia && this.activeMedia.transition) {
-          sourceTransitionPromise = this.activeMedia.transition.targetEffect(
+          sourceTransition = this.activeMedia.transition.targetEffect(
             'source',
             this.activeMedia.media,
           );
-          destTransitionPromise = this.activeMedia.transition.targetEffect(
+          destTransition = this.activeMedia.transition.targetEffect(
             'dest',
             this.loadingMedia.media,
           );
+          if (sourceTransition === undefined && destTransition === undefined)
+            throw new Error(
+              `Invalid mediafx-transition preset ${this.activeMedia.transition.preset}`,
+            );
         }
 
         // eslint-disable-next-line no-await-in-loop
         await this.activeMedia.media.finished;
 
-        if (
-          this.loadingMedia &&
-          (sourceTransitionPromise || destTransitionPromise)
-        ) {
+        if (this.loadingMedia && (sourceTransition || destTransition)) {
           // eslint-disable-next-line no-await-in-loop
-          const [, sourceTransition, destTransition] = await Promise.all([
-            this.loadingMediaPromise,
-            sourceTransitionPromise,
-            destTransitionPromise,
-          ]);
+          await this.loadingMediaPromise;
           this.loadingMedia.media.mountElement();
 
           if (sourceTransition?.style && this.activeMedia.media.shadowRoot)

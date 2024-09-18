@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import * as animations from '@shoelace-style/animations';
-import { EffectInfo } from './schema/index.js';
+import { fromError } from 'zod-validation-error';
+import { TransitionInfo, transitionSchema } from './schema/index.js';
 
 // https://github.com/shoelace-style/animations/pull/4
 declare module '@shoelace-style/animations' {
@@ -14,16 +15,6 @@ declare module '@shoelace-style/animations' {
   export const bounceOutRight: Animation;
   export const bounceInUp: Animation;
   export const bounceOutUp: Animation;
-}
-
-interface TransitionTargetInfo {
-  effects?: EffectInfo[];
-  style?: string;
-}
-
-interface TransitionInfo {
-  source?: TransitionTargetInfo;
-  dest?: TransitionTargetInfo;
 }
 
 interface TransitionsMap {
@@ -66,6 +57,25 @@ const wipe = (direction: 'top' | 'bottom' | 'left' | 'right') => {
     },
   ];
 };
+
+export const clockWipe = (size: number) => ({
+  source: {
+    style: `
+        :host {
+          mask-image: conic-gradient(black calc(var(--mediafx-angle) - ${size}deg), white var(--mediafx-angle), white);
+          mask-mode: luminance;
+        }
+      `,
+    effects: [
+      {
+        keyframes: [
+          { offset: 0, '--mediafx-angle': '0deg' },
+          { offset: 1, '--mediafx-angle': `${360 + size}deg` },
+        ],
+      },
+    ],
+  },
+});
 
 export const Transitions: TransitionsMap = {
   get crossFade() {
@@ -176,25 +186,17 @@ export const Transitions: TransitionsMap = {
     };
   },
   get clockWipe() {
-    //XXX need to be able to pass in parameters to transitions
-    const size = 10;
-    return {
-      source: {
-        style: `
-          :host {
-            mask-image: conic-gradient(black calc(var(--mediafx-angle) - ${size}deg), white var(--mediafx-angle), white);
-            mask-mode: luminance;
-          }
-        `,
-        effects: [
-          {
-            keyframes: [
-              { offset: 0, '--mediafx-angle': '0deg' },
-              { offset: 1, '--mediafx-angle': `${360 + size}deg` },
-            ],
-          },
-        ],
-      },
-    };
+    return clockWipe(10);
   },
 } as const;
+
+export const addCustomTransition = (
+  name: string,
+  transition: unknown,
+): void => {
+  try {
+    Transitions[name] = transitionSchema.parse(transition);
+  } catch (error) {
+    throw fromError(error);
+  }
+};

@@ -2,4 +2,5 @@
 // SPDX-License-Identifier: MIT
 
 export * from './Effect.js';
+export * from './Transition.js';
 export * from './Transform.js';

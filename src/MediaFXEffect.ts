@@ -1,9 +1,8 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
-import { fromError } from 'zod-validation-error';
-import { effectSchema, EffectInfo } from './schema/Effect.js';
-import MediaFXContent from './MediaFXContent.js';
+import { EffectInfo } from './schema/Effect.js';
+import { Effects } from './Effects.js';
 
 const template = document.createElement('template');
 template.innerHTML = `
@@ -17,8 +16,10 @@ export default class MediaFXEffect extends HTMLElement {
 
   private _endOffset?: number;
 
+  private _preset?: string;
+
   static get observedAttributes(): string[] {
-    return ['startoffset', 'endoffset'];
+    return ['startoffset', 'endoffset', 'preset'];
   }
 
   constructor() {
@@ -27,21 +28,14 @@ export default class MediaFXEffect extends HTMLElement {
     this.shadowRoot?.appendChild(template.content.cloneNode(true));
   }
 
-  protected async effectContent() {
-    const content = this.querySelector<MediaFXContent>(
-      ':scope > mediafx-content[type="application/json"',
-    );
-    return content?.textContent;
-  }
-
-  public async effectInfo(): Promise<EffectInfo> {
-    try {
-      const content = await this.effectContent();
-      if (!content) throw new Error('invalid mediafx-effect content');
-      return effectSchema.parse(JSON.parse(content));
-    } catch (error) {
-      throw fromError(error);
+  public effectInfo(): EffectInfo {
+    if (
+      this._preset &&
+      Object.prototype.hasOwnProperty.call(Effects, this._preset)
+    ) {
+      return Effects[this._preset];
     }
+    throw new Error(`Invalid mediafx-effect preset ${this._preset}`);
   }
 
   public get startOffset(): number | undefined {
@@ -63,6 +57,9 @@ export default class MediaFXEffect extends HTMLElement {
         break;
       case 'endoffset':
         this._endOffset = parseFloat(newValue);
+        break;
+      case 'preset':
+        this._preset = newValue;
         break;
       default:
     }

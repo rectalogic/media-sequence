@@ -18,18 +18,20 @@ function assert<T extends never>() {}
 type TypeEqualityGuard<A, B> = Exclude<A, B> | Exclude<B, A>;
 assert<TypeEqualityGuard<z.infer<typeof keyframeSchema>, Keyframe>>();
 
-export const effectSchema = z.object({
-  options: z
-    .object({
-      composite: z.enum(['accumulate', 'add', 'replace']).optional(),
-      fill: z
-        .enum(['auto', 'backwards', 'both', 'forwards', 'none'])
-        .optional(),
-      easing: z.string().optional(),
-      iterations: z.number().optional(),
-      iterationComposite: z.enum(['accumulate', 'replace']).optional(),
-    })
-    .optional(),
-  keyframes: z.array(keyframeSchema),
-});
+export const effectSchema = z
+  .object({
+    options: z
+      .object({
+        composite: z.enum(['accumulate', 'add', 'replace']).optional(),
+        fill: z
+          .enum(['auto', 'backwards', 'both', 'forwards', 'none'])
+          .optional(),
+        easing: z.string().optional(),
+        iterations: z.number().optional(),
+        iterationComposite: z.enum(['accumulate', 'replace']).optional(),
+      })
+      .optional(),
+    keyframes: z.array(keyframeSchema),
+  })
+  .strict();
 export type EffectInfo = z.infer<typeof effectSchema>;

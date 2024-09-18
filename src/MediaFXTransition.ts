@@ -1,13 +1,7 @@
 // Copyright (C) 2024 Andrew Wason
 // SPDX-License-Identifier: MIT
 
-// XXX need <mediafx-json> child and optional <mediafx-style> which is just the styles with no selector, and use ::slotted(.source)/::slotted(.dest) as selectors
-// XXX hmm, use <mediafx-target type="source">/<mediafx-target type="dest"> to contain the above
-// XXX need to support canned transitions too
-
-import { fromError } from 'zod-validation-error';
-import { effectSchema, EffectInfo } from './schema/Effect.js';
-import MediaFXContent from './MediaFXContent.js';
+import { EffectInfo } from './schema/Effect.js';
 import { Transitions } from './Transitions.js';
 
 type TargetType = 'source' | 'dest';
@@ -92,59 +86,33 @@ export default class MediaFXTransition extends HTMLElement {
   }
 
   // XXX cache effects and style, rebuild on slotchange
-  public async targetEffect(
+  public targetEffect(
     targetType: TargetType,
     targetElement: HTMLElement,
-  ): Promise<Transition | undefined> {
-    if (this._preset) {
-      const transition = Transitions[this._preset];
-      if (!(targetType in transition)) return undefined;
-      return this.buildTransition(
-        targetType,
-        targetElement,
-        transition[targetType]?.effects,
-        transition[targetType]?.style,
-      );
-    }
-
-    try {
-      const target = this.shadowRoot?.querySelector(
-        `:scope > mediafx-target[type="${targetType}"`,
-      );
-      if (target) {
-        const targetStyle = await target
-          .querySelector<MediaFXContent>(
-            ':scope > mediafx-content[type="text/css"]',
-          )
-          ?.content();
-        const targetJson = await Promise.all(
-          Array.from(
-            target.querySelectorAll<MediaFXContent>(
-              ':scope > mediafx-content[type="application/json"]',
-            ),
-          ).map(async tj => tj.content()),
-        );
-        let effects;
-        if (targetJson.length > 0) {
-          effects = targetJson
-            .filter((tj): tj is string => !!tj)
-            .map(tj => effectSchema.parse(JSON.parse(tj)));
-        }
+  ): Transition | undefined {
+    if (
+      this._preset &&
+      Object.prototype.hasOwnProperty.call(Transitions, this._preset)
+    ) {
+      const transitionPreset = Transitions[this._preset];
+      if (targetType in transitionPreset) {
         return this.buildTransition(
           targetType,
           targetElement,
-          effects,
-          targetStyle,
+          transitionPreset[targetType]?.effects,
+          transitionPreset[targetType]?.style,
         );
       }
-      return undefined;
-    } catch (error) {
-      throw fromError(error);
     }
+    return undefined;
   }
 
   public get duration(): number {
     return this._duration;
+  }
+
+  public get preset(): string | undefined {
+    return this._preset;
   }
 
   public attributeChangedCallback(
@@ -157,8 +125,7 @@ export default class MediaFXTransition extends HTMLElement {
         this._duration = parseFloat(newValue);
         break;
       case 'preset':
-        if (newValue in Transitions) this._preset = newValue;
-        else throw new Error(`Invalid preset ${newValue}`);
+        this._preset = newValue;
         break;
       default:
     }

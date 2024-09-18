@@ -9,6 +9,68 @@
     </style>
     <script src="../dist/src/index.js" type="module"></script>
     <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        addCustomEffect('jumpScale', {
+          options: { iterations: 2 },
+          keyframes: [
+            {
+              transform: 'translateY(0px)',
+            },
+            {
+              transform: 'translateY(200px) scale(2, 1)',
+            },
+            {
+              transform: 'translateY(0px)',
+            },
+          ],
+        });
+        addCustomEffect('sepia', {
+          keyframes: [{ filter: 'sepia(0)' }, { filter: 'sepia(1)' }],
+        });
+        addCustomTransformEffect('zoomDown', {
+          keyframes: [
+            {
+              offset: 0,
+              scale: 1.0,
+            },
+            {
+              offset: 1,
+              scale: 2.0,
+              translateY: 1.49,
+            },
+          ],
+        });
+        addCustomTransition('chaseLeft', {
+          source: {
+            effects: [
+              {
+                keyframes: [
+                  {
+                    transform: 'translateX(0%)',
+                  },
+                  {
+                    transform: 'translateX(-100%)',
+                  },
+                ],
+              },
+            ],
+          },
+          dest: {
+            effects: [
+              {
+                keyframes: [
+                  {
+                    transform: 'translateX(100%)',
+                  },
+                  {
+                    transform: 'translateX(0%)',
+                  },
+                ],
+              },
+            ],
+          },
+        });
+      });
       window.onload = async () => {
         const ms = document.querySelector('#sequence');
         ms.addEventListener('error', event =>
@@ -29,24 +91,11 @@
         startTime="100000"
         endTime="105000"
       >
-        <mediafx-effect startOffset="500" endOffset="-1000">
-          <!-- prettier-ignore --><mediafx-content type="application/json">
-            {
-              "options": { "iterations": 2 },
-              "keyframes": [
-                {
-                  "transform": "translateY(0px)"
-                },
-                {
-                  "transform": "translateY(200px) scale(2, 1)"
-                },
-                {
-                  "transform": "translateY(0px)"
-                }
-              ]
-            }
-          </mediafx-content>
-        </mediafx-effect>
+        <mediafx-effect
+          startOffset="500"
+          endOffset="-1000"
+          preset="jumpScale"
+        />
       </mediafx-video>
       <mediafx-transition
         duration="1000"
@@ -56,83 +105,28 @@
         src="https://cdn.glitch.me/364f8e5a-f12f-4f82-a386-20e6be6b1046/elephants_dream_1280x720.mp4?v=1715789814855"
         startTime="100000"
         endTime="105000"
-      >
-      </mediafx-video>
+      ></mediafx-video>
       <mediafx-image
         src="https://gl-transitions.com/static/media/hBd6EPoQT2C8VQYv65ys_White_Sands.51f2958f.jpg"
       >
-        <mediafx-transform startOffset="1000">
-          <!-- prettier-ignore --><mediafx-content type="application/json">
-            {
-              "keyframes": [
-                {
-                  "offset": 0,
-                  "scale": 1.0
-                },
-                {
-                  "offset": 1,
-                  "scale": 2.0,
-                  "translateY": 1.49
-                }
-            ]
-          }
-          </mediafx-content>
-        </mediafx-transform>
+        <mediafx-effect startOffset="1000" preset="zoomDown"></mediafx-effect>
       </mediafx-image>
       <mediafx-video
         src="https://cdn.glitch.me/364f8e5a-f12f-4f82-a386-20e6be6b1046/bbb_sunflower_1080p_30fps_normal_10min.mp4?v=1715787973754"
         startTime="5000"
         endTime="10000"
       >
-        <mediafx-effect startOffset="-1000">
-          <!-- prettier-ignore --><mediafx-content type="application/json">
-            {
-              "keyframes": [
-                { "filter": "sepia(0)" },
-                { "filter": "sepia(1)" }
-              ]
-            }
-          </mediafx-content>
-        </mediafx-effect>
+        <mediafx-effect startOffset="-1000" preset="sepia"></mediafx-effect>
       </mediafx-video>
-      <mediafx-transition duration="1000">
-        <mediafx-source
-          ><!-- prettier-ignore --><mediafx-content type="application/json">
-            {
-              "keyframes": [
-                {
-                  "transform": "translateX(0%)"
-                },
-                {
-                  "transform": "translateX(-100%)"
-                }
-              ]
-            }
-          </mediafx-content
-        ></mediafx-source
-        >
-        <mediafx-dest
-          ><!-- prettier-ignore --><mediafx-content type="application/json">
-            {
-              "keyframes": [
-                {
-                  "transform": "translateX(100%)"
-                },
-                {
-                  "transform": "translateX(0%)"
-                }
-              ]
-            }
-          </mediafx-content
-        ></mediafx-dest
-        >
-      </mediafx-transition>
+      <mediafx-transition
+        duration="1000"
+        preset="chaseLeft"
+      ></mediafx-transition>
       <mediafx-video
         src="https://cdn.glitch.me/364f8e5a-f12f-4f82-a386-20e6be6b1046/elephants_dream_1280x720.mp4?v=1715789814855"
         startTime="200000"
         endTime="205000"
-      >
-      </mediafx-video>
+      ></mediafx-video>
     </mediafx-sequence>
 
     <p>

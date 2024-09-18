@@ -4,7 +4,6 @@
 // XXX will need to handle the case where we are transitioning video and video/image and one of them stalls/buffers - need to pause the other so they stay in sync?
 
 import MediaFXEffect from './MediaFXEffect.js';
-import MediaFXTransform from './MediaFXTransform.js';
 
 const template = document.createElement('template');
 template.innerHTML = `
@@ -161,52 +160,29 @@ export default abstract class Media<
     this._mediaClock.currentTime = this.startTime || 0;
 
     this._animations.push(
-      ...(await Promise.all(
-        Array.from(
-          this.querySelectorAll<MediaFXTransform>(':scope > mediafx-transform'),
-        ).map(async mediafxTransform => {
-          const effectInfo = await mediafxTransform.effectInfo();
-          const effect = new KeyframeEffect(element, effectInfo.keyframes, {
-            ...this.computeAnimationDelayDuration(
-              mediafxTransform.startOffset,
-              mediafxTransform.endOffset,
-            ),
-            ...effectInfo.options,
-          });
-          const animation = new Animation(effect);
-          animation.currentTime = this.startTime || 0;
-          animation.pause();
-          return animation;
-        }),
-      )),
-    );
+      ...Array.from(
+        this.querySelectorAll<MediaFXEffect>(':scope > mediafx-effect'),
+      ).map(mediafxEffect => {
+        const timing = this.computeAnimationDelayDuration(
+          mediafxEffect.startOffset,
+          mediafxEffect.endOffset,
+        );
+        const effectInfo = mediafxEffect.effectInfo();
+        // Make all iterations play within our duration
+        timing.duration /=
+          effectInfo.options?.iterations === undefined
+            ? 1
+            : effectInfo.options.iterations;
 
-    this._animations.push(
-      ...(await Promise.all(
-        Array.from(
-          this.querySelectorAll<MediaFXEffect>(':scope > mediafx-effect'),
-        ).map(async mediafxEffect => {
-          const timing = this.computeAnimationDelayDuration(
-            mediafxEffect.startOffset,
-            mediafxEffect.endOffset,
-          );
-          const effectInfo = await mediafxEffect.effectInfo();
-          // Make all iterations play within our duration
-          timing.duration /=
-            effectInfo.options?.iterations === undefined
-              ? 1
-              : effectInfo.options.iterations;
-
-          const effect = new KeyframeEffect(this, effectInfo.keyframes, {
-            ...timing,
-            ...effectInfo.options,
-          });
-          const animation = new Animation(effect);
-          animation.currentTime = this.startTime || 0;
-          animation.pause();
-          return animation;
-        }),
-      )),
+        const effect = new KeyframeEffect(this, effectInfo.keyframes, {
+          ...timing,
+          ...effectInfo.options,
+        });
+        const animation = new Animation(effect);
+        animation.currentTime = this.startTime || 0;
+        animation.pause();
+        return animation;
+      }),
     );
   }
 
