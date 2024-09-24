@@ -5,18 +5,6 @@ import * as animations from '@shoelace-style/animations';
 import { fromError } from 'zod-validation-error';
 import { TransitionInfo, transitionSchema } from './schema/index.js';
 
-// https://github.com/shoelace-style/animations/pull/4
-declare module '@shoelace-style/animations' {
-  export const bounceInDown: Animation;
-  export const bounceOutDown: Animation;
-  export const bounceInLeft: Animation;
-  export const bounceOutLeft: Animation;
-  export const bounceInRight: Animation;
-  export const bounceOutRight: Animation;
-  export const bounceInUp: Animation;
-  export const bounceOutUp: Animation;
-}
-
 interface TransitionsMap {
   [key: string]: TransitionInfo;
 }
