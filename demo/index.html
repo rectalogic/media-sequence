@@ -7,49 +7,131 @@
         background: #fafafa;
       }
     </style>
-    <script src="../dist/src/media-fx.js" type="module"></script>
+    <script src="../dist/src/index.js" type="module"></script>
     <script>
-      const updatePlaylist = async () => {
-        const select = document.querySelector('#playlist');
-        const ms = document.querySelector('#sequence');
-        const response = await fetch(select.value);
-        if (response.ok) {
-          try {
-            const json = await response.json();
-            await ms.setPlaylist(json);
-          } catch (error) {
-            console.error(error);
-          }
-        } else {
-          console.error(response);
-        }
-      };
+      document.addEventListener('DOMContentLoaded', () => {
+        addCustomEffect('jumpScale', {
+          options: { iterations: 2 },
+          keyframes: [
+            {
+              transform: 'translateY(0px)',
+            },
+            {
+              transform: 'translateY(200px) scale(2, 1)',
+            },
+            {
+              transform: 'translateY(0px)',
+            },
+          ],
+        });
+        addCustomEffect('sepia', {
+          keyframes: [{ filter: 'sepia(0)' }, { filter: 'sepia(1)' }],
+        });
+        addCustomTransformEffect('zoomDown', {
+          keyframes: [
+            {
+              offset: 0,
+              scale: 1.0,
+            },
+            {
+              offset: 1,
+              scale: 2.0,
+              translateY: 1.49,
+            },
+          ],
+        });
+        addCustomTransition('chaseLeft', {
+          source: {
+            effects: [
+              {
+                keyframes: [
+                  {
+                    transform: 'translateX(0%)',
+                  },
+                  {
+                    transform: 'translateX(-100%)',
+                  },
+                ],
+              },
+            ],
+          },
+          dest: {
+            effects: [
+              {
+                keyframes: [
+                  {
+                    transform: 'translateX(100%)',
+                  },
+                  {
+                    transform: 'translateX(0%)',
+                  },
+                ],
+              },
+            ],
+          },
+        });
+      });
       window.onload = async () => {
         const ms = document.querySelector('#sequence');
         ms.addEventListener('error', event =>
           console.error(`${event.message} ${event.error}`),
         );
-        updatePlaylist();
       };
     </script>
   </head>
   <body>
-    <media-fx
+    <mediafx-sequence
       id="sequence"
       width="640"
       height="360"
       style="background-color: #f00; isolation: isolate"
     >
-    </media-fx>
+      <mediafx-video
+        src="https://cdn.glitch.me/364f8e5a-f12f-4f82-a386-20e6be6b1046/bbb_sunflower_1080p_30fps_normal_10min.mp4?v=1715787973754"
+        startTime="100000"
+        endTime="105000"
+      >
+        <mediafx-effect
+          startOffset="500"
+          endOffset="-1000"
+          preset="jumpScale"
+        />
+      </mediafx-video>
+      <mediafx-transition
+        duration="1000"
+        preset="crossFade"
+      ></mediafx-transition>
+      <mediafx-video
+        src="https://cdn.glitch.me/364f8e5a-f12f-4f82-a386-20e6be6b1046/elephants_dream_1280x720.mp4?v=1715789814855"
+        startTime="100000"
+        endTime="105000"
+      ></mediafx-video>
+      <mediafx-image
+        src="https://gl-transitions.com/static/media/hBd6EPoQT2C8VQYv65ys_White_Sands.51f2958f.jpg"
+      >
+        <mediafx-effect startOffset="1000" preset="zoomDown"></mediafx-effect>
+      </mediafx-image>
+      <mediafx-video
+        src="https://cdn.glitch.me/364f8e5a-f12f-4f82-a386-20e6be6b1046/bbb_sunflower_1080p_30fps_normal_10min.mp4?v=1715787973754"
+        startTime="5000"
+        endTime="10000"
+      >
+        <mediafx-effect startOffset="-1000" preset="sepia"></mediafx-effect>
+      </mediafx-video>
+      <mediafx-transition
+        duration="1000"
+        preset="chaseLeft"
+      ></mediafx-transition>
+      <mediafx-video
+        src="https://cdn.glitch.me/364f8e5a-f12f-4f82-a386-20e6be6b1046/elephants_dream_1280x720.mp4?v=1715789814855"
+        startTime="200000"
+        endTime="205000"
+      ></mediafx-video>
+    </mediafx-sequence>
+
     <p>
       <button onclick="sequence.play()">Play</button>
       <button onclick="sequence.pause()">Pause</button>
-    </p>
-    <p>
-      <select id="playlist" onchange="updatePlaylist()">
-        <option value="playlist.json">playlist.json</option>
-        <option value="transitions.json">transitions.json</option>
-      </select>
     </p>
   </body>
 </html>

@@ -2,20 +2,19 @@
 // SPDX-License-Identifier: MIT
 
 import { z } from 'zod';
-import { animationSchema } from './Animation.js';
+import { effectSchema } from './Effect.js';
 
-const transitionAnimationInfo = z
+const transitionTargetSchema = z
   .object({
-    style: z.object({}).catchall(z.string().nullable()).optional(),
-    animations: z.array(animationSchema.strict()).optional(),
+    effects: z.array(effectSchema).optional(),
+    style: z.string().optional(),
+  })
+  .strict();
+export const transitionSchema = z
+  .object({
+    source: transitionTargetSchema.optional(),
+    dest: transitionTargetSchema.optional(),
   })
   .strict();
 
-export type TransitionAnimationInfo = z.infer<typeof transitionAnimationInfo>;
-
-export const transitionInfoSchema = z.object({
-  source: transitionAnimationInfo,
-  dest: transitionAnimationInfo,
-});
-
-export type TransitionInfo = z.infer<typeof transitionInfoSchema>;
+export type TransitionInfo = z.infer<typeof transitionSchema>;

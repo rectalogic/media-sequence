@@ -2,32 +2,19 @@
 // SPDX-License-Identifier: MIT
 
 import * as animations from '@shoelace-style/animations';
-import { TransitionInfo } from './schema/index.js';
-
-// https://github.com/shoelace-style/animations/pull/4
-declare module '@shoelace-style/animations' {
-  export const bounceInDown: Animation;
-  export const bounceOutDown: Animation;
-  export const bounceInLeft: Animation;
-  export const bounceOutLeft: Animation;
-  export const bounceInRight: Animation;
-  export const bounceOutRight: Animation;
-  export const bounceInUp: Animation;
-  export const bounceOutUp: Animation;
-}
+import { fromError } from 'zod-validation-error';
+import { TransitionInfo, transitionSchema } from './schema/index.js';
 
 interface TransitionsMap {
   [key: string]: TransitionInfo;
 }
 
-const buildTransition = (source?: Keyframe[], dest?: Keyframe[]) => ({
-  source: source ? { animations: [{ keyframes: source }] } : {},
-  dest: dest
-    ? {
-        animations: [{ keyframes: dest }],
-      }
-    : {},
-});
+const buildTransition = (source?: Keyframe[], dest?: Keyframe[]) => {
+  const transition: TransitionInfo = {};
+  if (source) transition.source = { effects: [{ keyframes: source }] };
+  if (dest) transition.dest = { effects: [{ keyframes: dest }] };
+  return transition;
+};
 
 const wipe = (direction: 'top' | 'bottom' | 'left' | 'right') => {
   let top = '0';
@@ -59,15 +46,34 @@ const wipe = (direction: 'top' | 'bottom' | 'left' | 'right') => {
   ];
 };
 
+export const clockWipe = (size: number) => ({
+  source: {
+    style: `
+        :host {
+          mask-image: conic-gradient(black calc(var(--mediafx-angle) - ${size}deg), white var(--mediafx-angle), white);
+          mask-mode: luminance;
+        }
+      `,
+    effects: [
+      {
+        keyframes: [
+          { offset: 0, '--mediafx-angle': '0deg' },
+          { offset: 1, '--mediafx-angle': `${360 + size}deg` },
+        ],
+      },
+    ],
+  },
+});
+
 export const Transitions: TransitionsMap = {
   get crossFade() {
     return {
       source: {
-        style: { 'mix-blend-mode': 'plus-lighter' },
-        animations: [{ keyframes: [{ opacity: 1 }, { opacity: 0 }] }],
+        style: ':host { mix-blend-mode: plus-lighter; }',
+        effects: [{ keyframes: [{ opacity: 1 }, { opacity: 0 }] }],
       },
       dest: {
-        animations: [
+        effects: [
           {
             keyframes: [{ opacity: 0 }, { opacity: 1 }],
           },
@@ -101,9 +107,8 @@ export const Transitions: TransitionsMap = {
   },
   get spotlight() {
     return {
-      source: {},
       dest: {
-        animations: [
+        effects: [
           {
             keyframes: [
               { offset: 0, clipPath: 'circle(0% at 50% 50%)' },
@@ -121,7 +126,7 @@ export const Transitions: TransitionsMap = {
   get chevron() {
     return {
       source: {
-        animations: [
+        effects: [
           {
             keyframes: [
               {
@@ -144,7 +149,7 @@ export const Transitions: TransitionsMap = {
         ],
       },
       dest: {
-        animations: [
+        effects: [
           {
             keyframes: [
               {
@@ -168,4 +173,18 @@ export const Transitions: TransitionsMap = {
       },
     };
   },
+  get clockWipe() {
+    return clockWipe(10);
+  },
 } as const;
+
+export const addCustomTransition = (
+  name: string,
+  transition: unknown,
+): void => {
+  try {
+    Transitions[name] = transitionSchema.parse(transition);
+  } catch (error) {
+    throw fromError(error);
+  }
+};
